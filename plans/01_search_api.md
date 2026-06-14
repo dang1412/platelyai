@@ -75,15 +75,15 @@ Bỏ hẳn các "mode" rời rạc của code cũ (tags-mode / name-mode / keywo
 ### Bước 3 — Sinh ứng viên (lọc cứng)
 
 **Nhánh MÓN** (`dishes` không rỗng):
-1. `resolveDishes(dishes, maxPrice, origin)` → các `menu_items` khớp:
+1. `resolveDishes(dishes, maxPrice, category, origin)` → các `menu_items` khớp:
    - Semantic KNN trên `menu_items.embedding` (OpenAI `text-embedding-3-small`, input `"Món: <tên>"`).
    - Lexical: tên món khớp **ranh giới từ có dấu** trong `mi.name` (dist=0), hoặc trong
      `menu_categories.category_name` (dist nhỏ).
-   - **Lọc cứng `maxPrice` (5) và bán kính (4) NGAY trong SQL** (vì có `LIMIT TOP_K`, lọc sau sẽ
-     đánh rơi món xếp ngoài top).
+   - **Lọc cứng `maxPrice` (5)** và **`menu_categories.kind = category` (1)** NGAY trong SQL.
+   - **KHÔNG** lọc cứng bán kính (quyết định 4) — distance tính để rank, không cắt.
 2. Gom `menu_items` → quán: `coverage` = số tên-món-hỏi được phủ / tổng; `matchedDishes` = tối đa 3
-   món/quán làm chip.
-3. *Tái dùng:* `old/app/src/lib/dishes.ts` gần như nguyên vẹn.
+   món/quán làm chip; `distanceM` (nếu có origin) để rerank.
+3. *Tái dùng:* `old/app/src/lib/dishes.ts` (thêm lọc `kind`, bỏ lọc bán kính cứng).
 
 **Nhánh QUÁN** (`dishes` rỗng):
 1. Chọn `restaurants` lọc cứng: `category` (1) qua `serves_food/serves_drink`, bán kính (4) qua
@@ -133,17 +133,15 @@ src/app/api/search/route.ts   orchestrator (4 bước trên)
 | `CHEAP_REF` | 40000 | mốc chuẩn hoá cheapness |
 | trọng số rerank | W_COV 3 / W_MATCH 1.5 / W_TAG 1.5 / dist 0.5 / rating 0.5 + SORT_BOOST 2 | |
 
-## 6. Điểm cần bạn confirm
+## 6. Quyết định đã chốt
 
-1. **Provider LLM/embedding**: giữ Gemini (extract) + OpenAI `text-embedding-3-small` (dish KNN)?
-   Embedding trong DB do pipeline sinh bằng model nào thì search **phải** dùng đúng model đó.
-2. **`category` ở nhánh MÓN**: code cũ **không** lọc `serves_*` khi đã có tên món (vì tên món đã
-   định hướng, `serves_*` của Google nhiễu, dễ loại oan quán có món). Bạn muốn:
-   - (a) giữ vậy — category chỉ lọc cứng ở nhánh QUÁN *(khuyến nghị)*, hay
-   - (b) ép lọc cứng category cả nhánh MÓN (đúng chữ "yếu tố 1 lọc cứng" nhưng có thể sót quán)?
-3. **Không origin + có `location` không geocode ra**: trả top theo rating (bỏ qua geo) hay trả rỗng?
-4. **Nhánh MÓN mà bán kính rỗng** (có origin, không món nào trong 1.5km): trả rỗng (strict) như code
-   cũ, hay nới bán kính / bỏ lọc geo để có kết quả?
-5. Có cần giữ `reviews`/semantic mô tả quán trong ranking không? (schema mới đã bỏ embedding cấp
-   quán → hiện ranking quán **không** có tín hiệu semantic, chỉ geo + rating + tag.)
+1. **Provider**: Gemini (extract) + OpenAI `text-embedding-3-small` (dish KNN). Embedding trong DB
+   phải sinh đúng model này.
+2. **`category` ở nhánh MÓN**: **lọc cứng `menu_categories.kind = category`** (chọn (b)). Bỏ lọc thì
+   tên khớp sẽ kéo cả món thêm lặt vặt (topping/nước chấm) trùng tên.
+3. **Không origin / geocode fail**: rank theo các yếu tố còn lại (rating, tag, cheap), **không có
+   distance**.
+4. **Geo ở nhánh MÓN**: **không** lọc cứng bán kính — distance chỉ là tín hiệu ranking (vẫn rank
+   theo gần khi có origin). Nhánh QUÁN vẫn lọc cứng 1.5km.
+5. Bỏ qua reviews / semantic cấp quán (schema mới không có embedding cấp quán).
 ```
