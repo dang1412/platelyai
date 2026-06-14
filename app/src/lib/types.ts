@@ -1,5 +1,8 @@
 // Kiểu dùng chung giữa các bước của Search API.
 
+// Toạ độ điểm gốc (origin) để lọc/rank theo khoảng cách.
+export type LatLng = { lat: number; lng: number };
+
 // Yếu tố 1 — loại hình quán user muốn (null = không xác định).
 export type FoodCategory = "food" | "drink";
 
