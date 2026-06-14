@@ -1,0 +1,11 @@
+# Secrets — chỉ commit .env.example
+.env
+.env.*
+!.env.example
+
+# Symlink tham khảo code cũ (local-only, trỏ ra ngoài repo)
+/old
+
+# OS / editor
+.DS_Store
+*.swp
