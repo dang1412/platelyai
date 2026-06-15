@@ -27,3 +27,24 @@ export type ParsedQuery = {
   maxPrice: number | null; // 5 — lọc cứng (giá tối đa MỘT món, VND)
   wantsCheap: boolean; // 6 — ranking (cộng trọng số quán có món rẻ)
 };
+
+// Một quán trong kết quả /api/search (xem plan 01 §1). `rating` là string vì numeric của pg trả
+// về dạng chuỗi. `distanceM`/`matchedDishes` chỉ có ở ca tương ứng (có origin / nhánh MÓN).
+export type RestaurantSummary = {
+  id: number;
+  name: string;
+  address: string | null;
+  rating: string | null;
+  ratingCount: number | null;
+  tags: string[]; // vibe tag của quán (bảng tags), để card hiển thị + rank cộng điểm trùng
+  website: string | null;
+  googlePlaceId: string | null;
+  distanceM?: number | null; // khoảng cách (m) tới origin, null nếu không có origin
+  matchedDishes?: { name: string; price: number | null }[]; // chip món khớp (nhánh MÓN)
+};
+
+// Kết quả /api/search: kèm ý định đã trích để UI hiển thị "đang hiểu query thế này".
+export type SearchResponse = {
+  parsed: ParsedQuery | null; // null khi không trích được (query rỗng / fallback)
+  results: RestaurantSummary[];
+};

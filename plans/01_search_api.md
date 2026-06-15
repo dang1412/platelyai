@@ -126,7 +126,7 @@ src/app/api/search/route.ts   orchestrator (4 bước trên)
 | Tên | Giá trị | Ý nghĩa |
 |---|---|---|
 | `RADIUS_M` | 1500 | bán kính lọc cứng khi có origin |
-| `LIMIT` | 30 | số kết quả trả về |
+| `LIMIT` | 50 | số kết quả trả về |
 | `DISH_TOP_K` | 150 | ứng viên KNN mỗi tên món |
 | `DISH_DIST_THRESHOLD` | 0.30 | ngưỡng giữ món (recall) |
 | `COVERAGE_DIST_THRESHOLD` | 0.20 | ngưỡng "khớp chắc" để tính coverage |
@@ -137,10 +137,8 @@ src/app/api/search/route.ts   orchestrator (4 bước trên)
 
 1. **Provider**: Gemini (extract) + OpenAI `text-embedding-3-small` (dish KNN). Embedding trong DB
    phải sinh đúng model này.
-2. **`category` ở nhánh MÓN**: **lọc cứng `menu_categories.kind = category`** (chọn (b)). Bỏ lọc thì
-   tên khớp sẽ kéo cả món thêm lặt vặt (topping/nước chấm) trùng tên.
-3. **Không origin / geocode fail**: rank theo các yếu tố còn lại (rating, tag, cheap), **không có
-   distance**.
+2. **`category` ở nhánh MÓN**: **lọc cứng `menu_categories.kind = category`** (chọn (b)). Bỏ lọc thì tên khớp sẽ kéo cả món thêm lặt vặt (topping/nước chấm) trùng tên.
+3. **Không origin / geocode fail**: rank theo các yếu tố còn lại (rating, tag, cheap), **không có distance**.
 4. **Geo ở nhánh MÓN**: **lọc cứng bán kính `RADIUS_M` khi có origin** (`ST_DWithin` ngay trong query, cả KNN lẫn lexical). *Đảo lại quyết định ban đầu (vốn định không lọc cứng):* KNN HNSW trả TOP_K theo embedding trên toàn DB, không lọc thì khi data nhiều vùng, món địa phương rớt khỏi ứng viên (Meiko bug) và scan tốn. Không có origin → không lọc geo, rank theo yếu tố còn lại. Nhánh QUÁN vẫn lọc cứng 1.5km. Chi tiết: [01_4_dishes](./01_4_dishes.md).
 5. Bỏ qua reviews / semantic cấp quán (schema mới không có embedding cấp quán).
 ```
