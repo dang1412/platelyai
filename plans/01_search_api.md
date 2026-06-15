@@ -108,13 +108,15 @@ JS thuần, không chạm DB. Điểm = tổng có trọng số:
 ## 4. Module layout (app mới, SQL thuần qua `pg`)
 
 ```
-src/lib/db.ts        pg Pool + helper query<T>(sql, params)
-src/lib/extract.ts   parse query (Gemini) → ParsedQuery
-src/lib/embed.ts     OpenAI embeddings + toVectorLiteral
-src/lib/geocode.ts   địa điểm → LatLng
-src/lib/dishes.ts    resolveDishes (KNN + lexical)
-src/lib/rank.ts      rerank
-src/lib/types.ts     ParsedQuery, RestaurantSummary, MatchedDish, SearchResponse
+src/lib/db.ts         pg Pool + helper query<T>(sql, params)
+src/lib/extract.ts    parse query (Gemini) → ParsedQuery
+src/lib/embed.ts      OpenAI embeddings + toVectorLiteral
+src/lib/geocode.ts    địa điểm → LatLng
+src/lib/dishes.ts     resolveDishes (KNN + lexical) + RADIUS_M
+src/lib/candidates.ts sinh ứng viên 2 nhánh (MÓN/QUÁN) + assembleDishCandidates (thuần)
+src/lib/tags.ts       loadTagVocab (vocab tag, cache)
+src/lib/rank.ts       rerank
+src/lib/types.ts      ParsedQuery, RestaurantSummary, MatchedDish, SearchResponse
 src/app/api/search/route.ts   orchestrator (4 bước trên)
 ```
 
