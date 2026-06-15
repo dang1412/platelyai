@@ -72,16 +72,30 @@ thẳng `rows`. SQL viết tay, tham số hoá `$1,$2…`.
 
 - **KNN**: chạy HNSW (`menu_items_embedding_idx`), dưới tuyến tính → ổn dù DB lớn, không có origin
   cũng không lo.
-- **Lexical**: match trên `lower(mi.name)` (CÓ dấu, cố ý). Index trgm hiện có là
-  `menu_items_normalized_name_trgm_idx` trên `normalized_name` (KHÔNG dấu) → **không khớp biểu thức
-  query** → `~` regex chạy **seq scan toàn `menu_items`**. Có origin thì `ST_DWithin` lọc restaurants
-  (GIST) trước nên chỉ regex ít món; **không origin → regex toàn bảng** × số tên món.
+- **Lexical** (`seq scan toàn menu_items` khi không origin) có **3 nguyên nhân chồng nhau**, không
+  chỉ thiếu trgm index:
+  1. **Sai cột index**: query match `lower(mi.name)` (CÓ dấu, cố ý). Trgm index hiện có là
+     `menu_items_normalized_name_trgm_idx` trên `normalized_name` (KHÔNG dấu) → không khớp biểu thức.
+  2. **Thiếu index `menu_items.category_id`**: arm category `mi.category_id IN (SELECT … )` cần fetch
+     items theo `category_id`, nhưng schema không có index cột này (FK không tự tạo; chỉ có
+     `restaurant_id`, `normalized_name`, `embedding`).
+  3. **Hình dạng `OR ... IN (subquery)`**: Postgres khó gộp một index-scan (arm name) với một
+     semi-join subquery (arm category) vào `BitmapOr` → thường ép **seq scan** dù đã có đủ index.
+  Có origin thì `ST_DWithin` lọc restaurants (GIST) trước nên chỉ regex ít món; **không origin →
+  regex toàn bảng** × số tên món.
 - **Mức độ**: pilot 1 thành phố (vài chục nghìn món) seq scan chỉ vài–vài chục ms → chấp nhận. No-origin
   cũng hiếm (thiết bị thường có toạ độ / geocode ra origin). Rủi ro chỉ ở scale toàn quốc (triệu món).
-- **Cách chữa khi cần**: thêm trgm GIN trên đúng biểu thức match để `~` xài được index —
-  `CREATE INDEX menu_items_lower_name_trgm_idx ON menu_items USING GIN (lower(name) gin_trgm_ops);`
-  rồi `EXPLAIN ANALYZE` xác nhận Seq Scan → Bitmap Index Scan. KHÔNG tái dùng `normalized_name` (bỏ
-  dấu, phá chủ đích match có dấu). Chưa làm bây giờ.
+- **Cách chữa khi cần** (làm CẢ CỤM, không chỉ thêm 1 index):
+  1. Trgm GIN đúng biểu thức: `CREATE INDEX … ON menu_items USING GIN (lower(name) gin_trgm_ops);`
+     và `CREATE INDEX … ON menu_categories USING GIN (lower(category_name) gin_trgm_ops);`. KHÔNG tái
+     dùng `normalized_name` (bỏ dấu, phá chủ đích match có dấu).
+  2. Btree `menu_items.category_id` cho arm category.
+  3. **Tách `OR` → `UNION`** (hoặc 2 pass): nhánh name dùng trgm(lower(name)), nhánh category dùng
+     trgm category + btree category_id — mỗi nhánh hit index riêng.
+  `EXPLAIN ANALYZE` xác nhận Seq Scan → Bitmap Index Scan. Chưa làm bây giờ.
+  > **Không** rút gọn thành lexical-chỉ-category (rẻ & dễ index hơn vì hết `OR`): mất arm name =
+  > mất khớp tên CÓ DẤU `dist=0` — giá trị chính của tầng lexical, đẩy hết gánh nặng match tên sang
+  > KNN (vốn hay xếp tên khớp thấp).
 
 ## Test (`app/src/lib/dishes.test.ts`, vitest — mock `./db` + `./embed`)
 
