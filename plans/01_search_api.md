@@ -141,7 +141,6 @@ src/app/api/search/route.ts   orchestrator (4 bước trên)
    tên khớp sẽ kéo cả món thêm lặt vặt (topping/nước chấm) trùng tên.
 3. **Không origin / geocode fail**: rank theo các yếu tố còn lại (rating, tag, cheap), **không có
    distance**.
-4. **Geo ở nhánh MÓN**: **không** lọc cứng bán kính — distance chỉ là tín hiệu ranking (vẫn rank
-   theo gần khi có origin). Nhánh QUÁN vẫn lọc cứng 1.5km.
+4. **Geo ở nhánh MÓN**: **lọc cứng bán kính `RADIUS_M` khi có origin** (`ST_DWithin` ngay trong query, cả KNN lẫn lexical). *Đảo lại quyết định ban đầu (vốn định không lọc cứng):* KNN HNSW trả TOP_K theo embedding trên toàn DB, không lọc thì khi data nhiều vùng, món địa phương rớt khỏi ứng viên (Meiko bug) và scan tốn. Không có origin → không lọc geo, rank theo yếu tố còn lại. Nhánh QUÁN vẫn lọc cứng 1.5km. Chi tiết: [01_4_dishes](./01_4_dishes.md).
 5. Bỏ qua reviews / semantic cấp quán (schema mới không có embedding cấp quán).
 ```
