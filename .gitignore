@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# Dependencies (app/ có .gitignore riêng; chặn luôn node_modules ở root)
+/node_modules
+
 # Symlink tham khảo code cũ (local-only, trỏ ra ngoài repo)
 /old
 
