@@ -14,6 +14,12 @@ import type { FoodCategory, LatLng, MatchedDish } from "./types";
 export const DISH_TOP_K = 150;
 export const DISH_DIST_THRESHOLD = 0.3;
 
+// Số món tối đa giữ lại cho MỖI quán trước khi cắt DISH_TOP_K. Một quán phở liệt kê hàng chục biến
+// thể (tái/chín/gàu/nạm/đặc biệt…); không chặn thì vài quán menu to "ăn" hết TOP_K, các quán khớp
+// còn lại không bao giờ được fetch (món phổ biến + không origin → cắt theo rating, dồn về ~12 quán
+// rating cao). Cap này để TOP_K trải ra ~DISH_TOP_K/cap quán. Downstream chip cũng chỉ lấy ≤3 món.
+export const DISH_PER_RESTAURANT = 3;
+
 // Ngưỡng "khớp chắc" — chặt hơn DISH_DIST_THRESHOLD. Chỉ món có dist <= ngưỡng này mới được TÍNH
 // VÀO coverage ở rank, tránh quán phủ nhiều món LỎNG vượt quán phủ ít món CHUẨN. Món trong khoảng
 // (gate, threshold] vẫn hiện ra (recall) nhưng không cộng coverage. Tunable.
@@ -146,27 +152,37 @@ export async function resolveDishes(
     // UNION ALL hai nhánh để MỖI nhánh hit index riêng (gộp OR ép seq scan): nhánh TÊN dùng FTS GIN,
     // nhánh CATEGORY resolve category qua FTS rồi lọc mi.category_id (btree). Trùng itemId giữa 2
     // nhánh do add() dedup theo dist nhỏ nhất.
+    // Cap DISH_PER_RESTAURANT món/quán (ROW_NUMBER partition theo quán) TRƯỚC khi cắt TOP_K, để pool
+    // trải đều ra nhiều quán thay vì dồn vào vài quán menu to. Ưu tiên giữ món khớp tên đích danh
+    // (name_exact) rồi đồng nghĩa (name_any) khi chọn món đại diện của quán.
     const lex = await query<DishRow>(
       `SELECT id, restaurant_id, name, price, name_exact, name_any FROM (
-         SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-                (to_tsvector('simple', lower(mi.name)) @@ (${exactTsq})) AS name_exact,
-                TRUE AS name_any, ${ord} AS ord
-         FROM menu_items mi
-         ${join}
-         WHERE to_tsvector('simple', lower(mi.name)) @@ (${anyTsq})
-           ${kindFilter}
-           ${priceFilter}
-         UNION ALL
-         SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-                FALSE AS name_exact, FALSE AS name_any, ${ord} AS ord
-         FROM menu_items mi
-         ${join}
-         WHERE mi.category_id IN (
-                 SELECT id FROM menu_categories
-                 WHERE to_tsvector('simple', lower(category_name)) @@ (${anyTsq}))
-           ${kindFilter}
-           ${priceFilter}
-       ) u
+         SELECT u.*, ROW_NUMBER() OVER (
+                  PARTITION BY u.restaurant_id
+                  ORDER BY u.name_exact DESC, u.name_any DESC, u.id ASC
+                ) AS rn
+         FROM (
+           SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
+                  (to_tsvector('simple', lower(mi.name)) @@ (${exactTsq})) AS name_exact,
+                  TRUE AS name_any, ${ord} AS ord
+           FROM menu_items mi
+           ${join}
+           WHERE to_tsvector('simple', lower(mi.name)) @@ (${anyTsq})
+             ${kindFilter}
+             ${priceFilter}
+           UNION ALL
+           SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
+                  FALSE AS name_exact, FALSE AS name_any, ${ord} AS ord
+           FROM menu_items mi
+           ${join}
+           WHERE mi.category_id IN (
+                   SELECT id FROM menu_categories
+                   WHERE to_tsvector('simple', lower(category_name)) @@ (${anyTsq}))
+             ${kindFilter}
+             ${priceFilter}
+         ) u
+       ) ranked
+       WHERE rn <= ${DISH_PER_RESTAURANT}
        ${orderClause}
        LIMIT ${DISH_TOP_K}`,
       params,
