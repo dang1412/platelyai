@@ -79,7 +79,24 @@ giữ nguyên (chữa bằng cụm trgm GIN + tách `OR`→`UNION` khi cần).
 Thêm: hỏi `"gà rán"` → `$2` chứa biến thể `"chiên"`, khớp `"Gà chiên giòn"` → `SYN_LEX_DIST`. Các
 mock lexical cũ đổi `name_match` → `name_exact`/`name_any`.
 
+## Hiệu chỉnh theo DB thật
+
+`SYNONYM_GROUPS` đã được rà theo tần suất thật trong `menu_items.name` (37k món): chỉ giữ cặp mà cả
+hai phía có thật (hoặc phía DB ít nhưng query hay gõ), **loại** các cặp gộp món khác nhau
+(`nướng/quay`, `tôm/tép`, `dứa/thơm` — "thơm" còn nhập nhằng "thơm lừng"). Quy tắc: **member trong 1
+nhóm không được là từ-con của nhau** (vd bỏ "bún riêu cua" — đã chứa "bún riêu" — tránh đệ quy sinh
+biến thể rác). `expandSynonyms` lặp tới điểm bất động (bounded `MAX_VARIANTS`) để compose đa tầng:
+"french fries" → "khoai tây chiên" → "khoai tây rán".
+
+Recall thật (số `menu_items` khớp, chỉ tên gốc → +synonym):
+
+| query | tên gốc | +synonym |
+|---|---|---|
+| gà rán | 210 | 445 (+235) |
+| french fries | 3 | 227 (+224) |
+| cà phê | 550 | 927 (+377) |
+| bún cua | 1 | 131 (+130) |
+
 ## Việc tiếp
 
-Mở rộng `SYNONYM_GROUPS` dựa trên `menu_items.name` THẬT trong DB (hiện mới seed ~12 nhóm); cân nhắc
-đo nhánh semantic-only trên query log để quyết có siết/bỏ KNN không.
+Cân nhắc đo nhánh semantic-only trên query log để quyết có siết/bỏ KNN không.
