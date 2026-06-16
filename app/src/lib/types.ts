@@ -48,3 +48,46 @@ export type SearchResponse = {
   parsed: ParsedQuery | null; // null khi không trích được (query rỗng / fallback)
   results: RestaurantSummary[];
 };
+
+// ── Chi tiết quán (/api/restaurants/:id) ─────────────────────────────────────
+
+// Một món trong thực đơn modal chi tiết.
+export type MenuItem = {
+  name: string;
+  price: number | null;
+  description: string | null;
+};
+
+// Nhóm món theo category (giữ thứ tự display_order).
+export type MenuCategory = {
+  categoryName: string;
+  items: MenuItem[];
+};
+
+// Thông tin đầy đủ của một quán cho modal chi tiết. `rating` là string (numeric pg).
+export type RestaurantInfo = {
+  id: number;
+  name: string;
+  address: string | null;
+  rating: string | null;
+  ratingCount: number | null;
+  tags: string[] | null;
+  website: string | null;
+  googlePlaceId: string | null;
+  lat: number | null;
+  lng: number | null;
+  phone: string | null;
+};
+
+// Payload /api/restaurants/:id — thông tin quán + menu gom theo category.
+export type RestaurantDetail = {
+  restaurant: RestaurantInfo;
+  menu: MenuCategory[];
+};
+
+// Link Google Maps: ưu tiên place_id (chính xác), fallback tìm theo tên.
+export function mapUrl(placeId: string | null, name: string): string {
+  return placeId
+    ? `https://www.google.com/maps/place/?q=place_id:${placeId}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+}
