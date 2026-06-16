@@ -1,5 +1,7 @@
 import { query } from "./db";
-import { embedMany, toVectorLiteral } from "./embed";
+// KNN semantic TẠM TẮT — embedding không tách được sắc thái món Việt tên ngắn (đo thật: "bún riêu"
+// gần "bún bò" hơn "bún cua"; "gà rán" gần "gà nướng" hơn "gà chiên"). Lexical+synonym gánh chính.
+// import { embedMany, toVectorLiteral } from "./embed";
 import { expandSynonyms } from "./synonyms";
 import type { FoodCategory, LatLng, MatchedDish } from "./types";
 
@@ -57,7 +59,7 @@ export async function resolveDishes(
   const names = dishes.map((d) => d.trim()).filter(Boolean);
   if (names.length === 0) return [];
 
-  const vecs = await embedMany(names.map((n) => "Món: " + n));
+  // const vecs = await embedMany(names.map((n) => "Món: " + n)); // KNN tạm tắt
 
   const byItem = new Map<number, MatchedDish>();
   const add = (r: DishRow, dist: number, queryDish: string) => {
@@ -77,34 +79,34 @@ export async function resolveDishes(
   for (let i = 0; i < names.length; i++) {
     const queryDish = names[i];
 
-    // ── Semantic KNN ─────────────────────────────────────────────────────────────
-    if (vecs) {
-      const lit = toVectorLiteral(vecs[i]);
-      const params: unknown[] = [lit];
-      const joins: string[] = [];
-      const where = ["mi.embedding IS NOT NULL"];
-      if (category != null) {
-        joins.push("JOIN menu_categories mc ON mc.id = mi.category_id");
-        where.push(`mc.kind = $${params.push(category)}`);
-      }
-      if (maxPrice != null) where.push(`mi.price <= $${params.push(maxPrice)}`);
-      if (origin) joins.push(geoJoin(params, origin).sql);
-      const rows = await query<DishRow>(
-        `SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-                (mi.embedding <=> $1::vector) AS dist
-         FROM menu_items mi
-         ${joins.join("\n         ")}
-         WHERE ${where.join(" AND ")}
-         ORDER BY mi.embedding <=> $1::vector
-         LIMIT ${DISH_TOP_K}`,
-        params,
-      );
-      for (const r of rows) {
-        const dist = Number(r.dist);
-        if (dist > DISH_DIST_THRESHOLD) continue;
-        add(r, dist, queryDish);
-      }
-    }
+    // ── Semantic KNN (TẠM TẮT — xem ghi chú ở import) ────────────────────────────
+    // if (vecs) {
+    //   const lit = toVectorLiteral(vecs[i]);
+    //   const params: unknown[] = [lit];
+    //   const joins: string[] = [];
+    //   const where = ["mi.embedding IS NOT NULL"];
+    //   if (category != null) {
+    //     joins.push("JOIN menu_categories mc ON mc.id = mi.category_id");
+    //     where.push(`mc.kind = $${params.push(category)}`);
+    //   }
+    //   if (maxPrice != null) where.push(`mi.price <= $${params.push(maxPrice)}`);
+    //   if (origin) joins.push(geoJoin(params, origin).sql);
+    //   const rows = await query<DishRow>(
+    //     `SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
+    //             (mi.embedding <=> $1::vector) AS dist
+    //      FROM menu_items mi
+    //      ${joins.join("\n         ")}
+    //      WHERE ${where.join(" AND ")}
+    //      ORDER BY mi.embedding <=> $1::vector
+    //      LIMIT ${DISH_TOP_K}`,
+    //     params,
+    //   );
+    //   for (const r of rows) {
+    //     const dist = Number(r.dist);
+    //     if (dist > DISH_DIST_THRESHOLD) continue;
+    //     add(r, dist, queryDish);
+    //   }
+    // }
 
     // ── Lexical (+ đồng nghĩa), full-text search ─────────────────────────────────
     // Mở rộng tên hỏi ra các biến thể đồng nghĩa (synonyms.ts), match qua FTS 'simple' để DÙNG

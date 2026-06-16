@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  resolveDishes,
-  DISH_DIST_THRESHOLD,
-  LEX_CATEGORY_DIST,
-  SYN_LEX_DIST,
-} from "./dishes";
+import { resolveDishes, LEX_CATEGORY_DIST, SYN_LEX_DIST } from "./dishes";
 
 // Mock DB + embed: dishes.ts chỉ là tầng query, test logic gom/dedup/lọc không chạm Postgres.
 const { queryMock } = vi.hoisted(() => ({ queryMock: vi.fn() }));
@@ -39,27 +34,18 @@ describe("resolveDishes", () => {
     expect(queryMock).not.toHaveBeenCalled();
   });
 
-  it("gom KNN + lexical, dedup theo itemId giữ dist nhỏ nhất", async () => {
+  it("dedup theo itemId giữ dist nhỏ nhất (2 nhánh UNION cùng món)", async () => {
+    // Cùng itemId từ nhánh category (0.05) và nhánh name (exact → 0) → giữ 0.
     route(
-      [{ id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, dist: 0.12 }],
-      [{ id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, name_exact: true, name_any: true }],
+      [],
+      [
+        { id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, name_exact: false, name_any: false },
+        { id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, name_exact: true, name_any: true },
+      ],
     );
     const out = await resolveDishes(["phở bò"]);
     expect(out).toHaveLength(1);
-    // lexical name_exact → dist 0 < 0.12 ⇒ thắng.
     expect(out[0]).toMatchObject({ itemId: 1, dist: 0, queryDish: "phở bò" });
-  });
-
-  it("KNN: loại món có dist > ngưỡng", async () => {
-    route(
-      [
-        { id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, dist: 0.1 },
-        { id: 2, restaurant_id: 9, name: "Phở gà", price: 40000, dist: DISH_DIST_THRESHOLD + 0.01 },
-      ],
-      [],
-    );
-    const out = await resolveDishes(["phở"]);
-    expect(out.map((d) => d.itemId)).toEqual([1]);
   });
 
   it("lexical: name_exact → dist 0, match qua tên category → LEX_CATEGORY_DIST", async () => {
@@ -89,29 +75,18 @@ describe("resolveDishes", () => {
     expect(lexSql).toContain("phraseto_tsquery");
   });
 
-  it("maxPrice + category → đẩy filter vào SQL params + JOIN kind", async () => {
+  it("maxPrice + category → đẩy filter vào SQL params + lọc kind (lexical)", async () => {
     route([], []);
     await resolveDishes(["phở"], 50000, "food");
-    const [knnSql, knnParams] = queryMock.mock.calls.find((c) => isKnn(c[0]))!;
-    expect(knnSql).toContain("JOIN menu_categories mc");
-    expect(knnSql).toContain("mc.kind =");
-    expect(knnParams).toContain(50000);
-    expect(knnParams).toContain("food");
-
     const [lexSql, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
     expect(lexSql).toContain("WHERE kind =");
     expect(lexParams).toContain("food");
     expect(lexParams).toContain(50000);
   });
 
-  it("có origin → lọc cứng bán kính (ST_DWithin) trên CẢ KNN lẫn lexical", async () => {
+  it("có origin → lexical lọc cứng bán kính (ST_DWithin) + ORDER theo gần", async () => {
     route([], []);
     await resolveDishes(["phở"], null, null, { lat: 10, lng: 106 });
-
-    const [knnSql, knnParams] = queryMock.mock.calls.find((c) => isKnn(c[0]))!;
-    expect(knnSql).toContain("JOIN restaurants");
-    expect(knnSql).toContain("ST_DWithin");
-    expect(knnParams).toEqual(expect.arrayContaining([106, 10]));
 
     const [lexSql, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
     expect(lexSql).toContain("ST_DWithin"); // lọc cứng
@@ -122,23 +97,10 @@ describe("resolveDishes", () => {
   it("không origin → KHÔNG lọc cứng bán kính (ST_DWithin); lexical ORDER theo rating giảm dần", async () => {
     route([], []);
     await resolveDishes(["phở"]);
-    for (const [sql] of queryMock.mock.calls) {
-      expect(sql).not.toContain("ST_DWithin"); // không lọc cứng bán kính
-    }
-    // Lexical vẫn JOIN restaurants để lấy rating, sắp giảm dần (giữ quán tốt khi cắt TOP_K).
     const [lexSql] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
+    expect(lexSql).not.toContain("ST_DWithin"); // không lọc cứng bán kính
+    // Lexical vẫn JOIN restaurants để lấy rating, sắp giảm dần (giữ quán tốt khi cắt TOP_K).
     expect(lexSql).toContain("JOIN restaurants");
     expect(lexSql).toContain("ORDER BY ord DESC NULLS LAST");
-    // KNN không origin vẫn không chạm restaurants.
-    const [knnSql] = queryMock.mock.calls.find((c) => isKnn(c[0]))!;
-    expect(knnSql).not.toContain("JOIN restaurants");
-  });
-
-  it("embed trả null (thiếu key) → chỉ chạy lexical", async () => {
-    embedManyMock.mockResolvedValue(null);
-    route([], [{ id: 1, restaurant_id: 9, name: "Phở", price: 1, name_exact: true, name_any: true }]);
-    const out = await resolveDishes(["phở"]);
-    expect(out).toHaveLength(1);
-    expect(queryMock.mock.calls.every((c) => !isKnn(c[0]))).toBe(true);
   });
 });
