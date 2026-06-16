@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { expandSynonyms, lexAlternationPattern } from "./synonyms";
+import { expandSynonyms } from "./synonyms";
 
 describe("expandSynonyms", () => {
   it("query gốc luôn đứng ĐẦU (call site phân biệt đích danh vs đồng nghĩa)", () => {
@@ -41,23 +41,5 @@ describe("expandSynonyms", () => {
       expect(new Set(v).size).toBe(v.length);
       expect(v.length).toBeLessThanOrEqual(16);
     }
-  });
-});
-
-describe("lexAlternationPattern", () => {
-  it("bọc ranh giới từ POSIX + join '|' các term", () => {
-    expect(lexAlternationPattern(["gà rán", "gà chiên"])).toBe(
-      "(^|[^[:alnum:]])(gà rán|gà chiên)([^[:alnum:]]|$)",
-    );
-  });
-
-  it("escape ký tự đặc biệt regex để tên món có ()/+ không vỡ pattern", () => {
-    const p = lexAlternationPattern(["phở (đặc biệt)", "combo 1+1"]);
-    expect(p).toContain("phở \\(đặc biệt\\)");
-    expect(p).toContain("combo 1\\+1");
-  });
-
-  it("lowercase + trim từng term", () => {
-    expect(lexAlternationPattern(["  Phở Bò  "])).toContain("(phở bò)");
   });
 });

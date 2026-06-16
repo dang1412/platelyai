@@ -95,6 +95,11 @@ CREATE INDEX IF NOT EXISTS menu_categories_restaurant_idx
 CREATE INDEX IF NOT EXISTS menu_categories_kind_idx
   ON menu_categories (kind);
 
+-- Lexical match tên category (nhánh category của dishes). FTS 'simple' = tách token theo phi-alnum,
+-- GIỮ DẤU (không stem/stopword) → đúng ngữ nghĩa ranh-giới-từ, dùng được GIN index thay vì seq scan.
+CREATE INDEX IF NOT EXISTS menu_categories_name_fts_idx
+  ON menu_categories USING GIN (to_tsvector('simple', lower(category_name)));
+
 
 -- ────────────────────────────── menu_items ────────────────────────────
 -- Món thực tế (giữ denormalized có chủ đích — tên món local rất đa dạng).
@@ -124,11 +129,22 @@ CREATE TABLE IF NOT EXISTS menu_items (
 CREATE INDEX IF NOT EXISTS menu_items_embedding_idx
   ON menu_items USING hnsw (embedding vector_cosine_ops);
 
--- Gom món → quán ở bước ranking.
+-- Gom món → quán ở bước ranking. Cũng phục vụ nhánh category của dishes (mi.category_id = ANY/IN).
 CREATE INDEX IF NOT EXISTS menu_items_restaurant_idx
   ON menu_items (restaurant_id);
 
--- Lexical match tên món.
+-- Nhánh category của dishes lọc theo category_id (FK không tự tạo index).
+CREATE INDEX IF NOT EXISTS menu_items_category_id_idx
+  ON menu_items (category_id);
+
+-- Lexical match tên món (nhánh chính của dishes). FTS 'simple': token theo phi-alnum, GIỮ DẤU →
+-- ngữ nghĩa ranh-giới-từ (vd "chè" KHÔNG khớp "cheese") + dùng GIN index, sublinear khi DB lớn.
+-- Biểu thức PHẢI khớp đúng query trong dishes.ts: to_tsvector('simple', lower(name)).
+CREATE INDEX IF NOT EXISTS menu_items_name_fts_idx
+  ON menu_items USING GIN (to_tsvector('simple', lower(name)));
+
+-- Index cũ trên normalized_name (KHÔNG dấu) không còn query nào dùng — search đã chuyển sang FTS có
+-- dấu ở trên. Giữ lại vì script sinh embedding vẫn ghi normalized_name; có thể drop sau.
 CREATE INDEX IF NOT EXISTS menu_items_normalized_name_trgm_idx
   ON menu_items USING GIN (normalized_name gin_trgm_ops);
 
