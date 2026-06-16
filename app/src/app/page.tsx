@@ -1,65 +1,166 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import SearchBar from "@/components/SearchBar";
+import RestaurantCard, { fmtVnd } from "@/components/RestaurantCard";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import type {
+  LatLng,
+  ParsedQuery,
+  RestaurantSummary,
+  SearchResponse,
+} from "@/lib/types";
+
+// &lat=..&lng=.. để gửi toạ độ thiết bị lên API; "" nếu chưa bật định vị.
+const geoParam = (c: LatLng | null) => (c ? `&lat=${c.lat}&lng=${c.lng}` : "");
+
+const searchUrl = (q: string, c: LatLng | null) =>
+  `/api/search?q=${encodeURIComponent(q)}${geoParam(c)}`;
 
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<RestaurantSummary[]>([]);
+  const [parsed, setParsed] = useState<ParsedQuery | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { coords, status: geoStatus, request: requestGeo, clear: clearGeo } =
+    useGeolocation();
+
+  // query đổi khi user commit (Enter/blur); coords đổi khi bật/tắt định vị.
+  // Cả hai đều phải tải lại — gộp vào một effect, AbortController huỷ request cũ.
+  // query rỗng vẫn gọi /api/search (route trả top rating / quán gần khi có origin).
+  useEffect(() => {
+    const controller = new AbortController();
+    const trimmed = query.trim();
+
+    // Hiện trạng thái tải ngay khi query/coords đổi (data-fetching effect cần setState đồng bộ).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
+    fetch(searchUrl(trimmed, coords), { signal: controller.signal })
+      .then((r) => r.json() as Promise<SearchResponse>)
+      .then(({ parsed, results }) => {
+        setParsed(parsed);
+        setResults(results);
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") console.error(e);
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [query, coords]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <header className="mb-8 text-center">
+        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+          🍜 Plately
+        </h1>
+        <p className="mt-1 text-zinc-500 dark:text-zinc-400">
+          Tìm quán ăn ngon gần Vinhomes Ocean Park
+        </p>
+      </header>
+
+      <div className="mx-auto mb-8 max-w-2xl">
+        <SearchBar value={query} onSearch={setQuery} />
+
+        {/* Bật/tắt định vị thiết bị để tìm quán gần vị trí thật */}
+        {geoStatus !== "unsupported" && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            {coords ? (
+              <>
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                  📍 Đang dùng vị trí của bạn
+                </span>
+                <button
+                  type="button"
+                  onClick={clearGeo}
+                  className="rounded-full px-2 py-0.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  Tắt
+                </button>
+              </>
+            ) : geoStatus === "denied" ? (
+              <span className="text-zinc-500 dark:text-zinc-400">
+                Đã chặn định vị — bật lại trong cài đặt trình duyệt, hoặc gõ tên
+                địa điểm trong câu tìm.
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={requestGeo}
+                disabled={geoStatus === "prompting"}
+                className="rounded-full bg-zinc-100 px-3 py-0.5 font-medium text-zinc-700 transition hover:bg-zinc-200 disabled:opacity-60 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+              >
+                {geoStatus === "prompting"
+                  ? "Đang lấy vị trí…"
+                  : "📍 Dùng vị trí của tôi"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Ý định AI trích xuất từ câu tìm kiếm (6 yếu tố của plan 01) */}
+        {parsed && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            {parsed.category && (
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                {parsed.category === "food" ? "🍽 Đồ ăn" : "🥤 Giải khát"}
+              </span>
+            )}
+            {parsed.dishes.map((d) => (
+              <span
+                key={`dish-${d}`}
+                className="rounded-full bg-green-100 px-2.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+              >
+                🍜 {d}
+              </span>
+            ))}
+            {parsed.tags.map((t) => (
+              <span
+                key={`tag-${t}`}
+                className="rounded-full bg-orange-100 px-2.5 py-0.5 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+              >
+                {t}
+              </span>
+            ))}
+            {parsed.maxPrice != null && (
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                💰 ≤ {fmtVnd(parsed.maxPrice)}
+              </span>
+            )}
+            {parsed.wantsCheap && (
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                ưu tiên rẻ
+              </span>
+            )}
+            {coords ? (
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                📍 Vị trí của bạn
+              </span>
+            ) : parsed.location ? (
+              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                📍 {parsed.location}
+              </span>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-center text-zinc-500">Đang tải…</p>
+      ) : results.length === 0 ? (
+        <p className="text-center text-zinc-500">
+          {query.trim()
+            ? `Không tìm thấy quán nào khớp với “${query}”.`
+            : "Chưa có quán nào để hiển thị."}
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {results.map((r) => (
+            <RestaurantCard key={r.id} restaurant={r} />
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
   );
 }
