@@ -1,5 +1,6 @@
 import { query } from "./db";
 import { embedMany, toVectorLiteral } from "./embed";
+import { expandSynonyms, lexAlternationPattern } from "./synonyms";
 import type { FoodCategory, LatLng, MatchedDish } from "./types";
 
 // Bước 4 (nhánh MÓN) — map mỗi tên món user hỏi về các menu_items khớp, để bước rank gom về quán.
@@ -20,6 +21,11 @@ export const COVERAGE_DIST_THRESHOLD = 0.2;
 // biến thể: "Phở Tái" → "Tái lăn"). Nhỏ hơn COVERAGE_DIST_THRESHOLD (vẫn tính phủ) nhưng > 0 để
 // món match đích danh tên (dist=0) vẫn thắng khi chọn chip.
 export const LEX_CATEGORY_DIST = 0.05;
+
+// dist gán cho món khớp qua ĐỒNG NGHĨA (bảng synonyms.ts), vd hỏi "gà rán" trúng "gà chiên giòn".
+// > 0 để khớp đích danh tên (dist=0) vẫn thắng, nhưng < COVERAGE_DIST_THRESHOLD → VẪN tính coverage
+// (đồng nghĩa đã được curate đúng, khác hẳn semantic mờ). Tunable.
+export const SYN_LEX_DIST = 0.03;
 
 // Bán kính lọc cứng khi có origin (m). Là 1 nguồn sự thật cho geo radius — rank.ts sẽ import lại
 // để chuẩn hoá nearness. Tunable (plan 01 §5).
@@ -99,14 +105,14 @@ export async function resolveDishes(
       }
     }
 
-    // ── Lexical ──────────────────────────────────────────────────────────────────
-    // Ranh giới từ (phi-chữ hai đầu) trên lower(name) CÓ DẤU. Escape regex để tên món có ()/+…
-    // không vỡ pattern.
-    const lexPattern =
-      "(^|[^[:alnum:]])" +
-      queryDish.toLowerCase().replace(/[.^$*+?()[\]{}|\\]/g, "\\$&") +
-      "([^[:alnum:]]|$)";
-    const params: unknown[] = [lexPattern];
+    // ── Lexical (+ đồng nghĩa) ──────────────────────────────────────────────────
+    // Mở rộng tên hỏi ra các biến thể đồng nghĩa (synonyms.ts). $1 = pattern CHỈ tên gốc (khớp →
+    // dist 0); $2 = pattern alternation GỒM cả đồng nghĩa (khớp → SYN_LEX_DIST). Cả hai khớp ranh
+    // giới từ trên lower(name) CÓ DẤU. variants[0] luôn là tên gốc.
+    const variants = expandSynonyms(queryDish);
+    const exactPattern = lexAlternationPattern([variants[0]]);
+    const anyPattern = lexAlternationPattern(variants);
+    const params: unknown[] = [exactPattern, anyPattern];
     // Lọc kind: item phải thuộc category đúng kind (subquery riêng, tách khỏi OR match tên category).
     const kindFilter =
       category != null
@@ -125,18 +131,21 @@ export async function resolveDishes(
     }
     const lex = await query<DishRow>(
       `SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-              (lower(mi.name) ~ $1) AS name_match
+              (lower(mi.name) ~ $1) AS name_exact,
+              (lower(mi.name) ~ $2) AS name_any
        FROM menu_items mi
        ${join}
-       WHERE (lower(mi.name) ~ $1
-          OR mi.category_id IN (SELECT id FROM menu_categories WHERE lower(category_name) ~ $1))
+       WHERE (lower(mi.name) ~ $2
+          OR mi.category_id IN (SELECT id FROM menu_categories WHERE lower(category_name) ~ $2))
          ${kindFilter}
          ${priceFilter}
        ${orderBy}
        LIMIT ${DISH_TOP_K}`,
       params,
     );
-    for (const r of lex) add(r, r.name_match ? 0 : LEX_CATEGORY_DIST, queryDish);
+    // Đích danh tên → 0; đồng nghĩa → SYN_LEX_DIST; chỉ khớp tên category → LEX_CATEGORY_DIST.
+    for (const r of lex)
+      add(r, r.name_exact ? 0 : r.name_any ? SYN_LEX_DIST : LEX_CATEGORY_DIST, queryDish);
   }
 
   return [...byItem.values()];
@@ -164,5 +173,6 @@ type DishRow = {
   name: string;
   price: number | string | null;
   dist?: number | string;
-  name_match?: boolean;
+  name_exact?: boolean;
+  name_any?: boolean;
 };

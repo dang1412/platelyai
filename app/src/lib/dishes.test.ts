@@ -3,6 +3,7 @@ import {
   resolveDishes,
   DISH_DIST_THRESHOLD,
   LEX_CATEGORY_DIST,
+  SYN_LEX_DIST,
 } from "./dishes";
 
 // Mock DB + embed: dishes.ts chỉ là tầng query, test logic gom/dedup/lọc không chạm Postgres.
@@ -41,11 +42,11 @@ describe("resolveDishes", () => {
   it("gom KNN + lexical, dedup theo itemId giữ dist nhỏ nhất", async () => {
     route(
       [{ id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, dist: 0.12 }],
-      [{ id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, name_match: true }],
+      [{ id: 1, restaurant_id: 9, name: "Phở bò", price: 50000, name_exact: true, name_any: true }],
     );
     const out = await resolveDishes(["phở bò"]);
     expect(out).toHaveLength(1);
-    // lexical name_match → dist 0 < 0.12 ⇒ thắng.
+    // lexical name_exact → dist 0 < 0.12 ⇒ thắng.
     expect(out[0]).toMatchObject({ itemId: 1, dist: 0, queryDish: "phở bò" });
   });
 
@@ -61,18 +62,30 @@ describe("resolveDishes", () => {
     expect(out.map((d) => d.itemId)).toEqual([1]);
   });
 
-  it("lexical: name_match → dist 0, match qua tên category → LEX_CATEGORY_DIST", async () => {
+  it("lexical: name_exact → dist 0, match qua tên category → LEX_CATEGORY_DIST", async () => {
     route(
       [],
       [
-        { id: 1, restaurant_id: 9, name: "Tái lăn", price: 60000, name_match: false },
-        { id: 2, restaurant_id: 8, name: "Phở bò tái", price: 55000, name_match: true },
+        { id: 1, restaurant_id: 9, name: "Tái lăn", price: 60000, name_exact: false, name_any: false },
+        { id: 2, restaurant_id: 8, name: "Phở bò tái", price: 55000, name_exact: true, name_any: true },
       ],
     );
     const out = await resolveDishes(["phở"]);
     const byId = Object.fromEntries(out.map((d) => [d.itemId, d.dist]));
     expect(byId[1]).toBe(LEX_CATEGORY_DIST);
     expect(byId[2]).toBe(0);
+  });
+
+  it("đồng nghĩa: hỏi 'gà rán' → pattern $2 chứa 'gà chiên', khớp synonym → SYN_LEX_DIST", async () => {
+    route(
+      [],
+      [{ id: 1, restaurant_id: 9, name: "Gà chiên giòn", price: 50000, name_exact: false, name_any: true }],
+    );
+    const out = await resolveDishes(["gà rán"]);
+    expect(out[0]).toMatchObject({ itemId: 1, dist: SYN_LEX_DIST });
+    // $2 (anyPattern) phải có biến thể đồng nghĩa "chiên".
+    const [, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
+    expect(String(lexParams[1])).toContain("chiên");
   });
 
   it("maxPrice + category → đẩy filter vào SQL params + JOIN kind", async () => {
@@ -116,7 +129,7 @@ describe("resolveDishes", () => {
 
   it("embed trả null (thiếu key) → chỉ chạy lexical", async () => {
     embedManyMock.mockResolvedValue(null);
-    route([], [{ id: 1, restaurant_id: 9, name: "Phở", price: 1, name_match: true }]);
+    route([], [{ id: 1, restaurant_id: 9, name: "Phở", price: 1, name_exact: true, name_any: true }]);
     const out = await resolveDishes(["phở"]);
     expect(out).toHaveLength(1);
     expect(queryMock.mock.calls.every((c) => !isKnn(c[0]))).toBe(true);

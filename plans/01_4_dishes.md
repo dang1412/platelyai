@@ -30,7 +30,8 @@ Gom từ **2 nguồn**, dedup theo `itemId` giữ `dist` nhỏ nhất:
    `dist <= DISH_DIST_THRESHOLD`. Bỏ qua nếu `embedMany` trả `null` (thiếu key) → vẫn còn lexical.
 2. **Lexical** — tên món khớp **ranh giới từ CÓ DẤU** trong `mi.name` (`dist=0`, mạnh nhất) hoặc
    trong `menu_categories.category_name` (`dist=LEX_CATEGORY_DIST`, cho ca tên món bị cắt theo
-   category). KHÔNG substring + unaccent ("chè" lọt "cheese"). Regex được escape.
+   category). KHÔNG substring + unaccent ("chè" lọt "cheese"). Regex được escape. **Đồng nghĩa thủ
+   công** (`rán`↔`chiên`, `bún riêu`↔`bún cua`…) cộng vào nhánh này — xem [01_4b_synonyms](./01_4b_synonyms.md).
 
 **Lọc cứng NGAY trong SQL** (không lọc sau — có `LIMIT DISH_TOP_K` thì lọc sau đánh rơi món xếp > K):
 - `maxPrice` → `mi.price <= $n` (price NULL bị loại khi có maxPrice).
@@ -55,6 +56,7 @@ Không origin → `ORDER BY mi.id` (xác định, tránh Postgres trả tuỳ th
 | `DISH_DIST_THRESHOLD` | 0.30 | ngưỡng giữ món (recall) |
 | `COVERAGE_DIST_THRESHOLD` | 0.20 | ngưỡng "khớp chắc" để tính coverage (rank dùng) |
 | `LEX_CATEGORY_DIST` | 0.05 | dist món match qua tên category |
+| `SYN_LEX_DIST` | 0.03 | dist món match qua đồng nghĩa ([01_4b](./01_4b_synonyms.md)) |
 
 ## db.ts
 
