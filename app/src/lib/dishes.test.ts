@@ -83,9 +83,10 @@ describe("resolveDishes", () => {
     );
     const out = await resolveDishes(["gà rán"]);
     expect(out[0]).toMatchObject({ itemId: 1, dist: SYN_LEX_DIST });
-    // $2 (anyPattern) phải có biến thể đồng nghĩa "chiên".
-    const [, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
-    expect(String(lexParams[1])).toContain("chiên");
+    // Biến thể đồng nghĩa "gà chiên" phải được đẩy vào params (→ phraseto_tsquery của anyTsq).
+    const [lexSql, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
+    expect(lexParams).toContain("gà chiên");
+    expect(lexSql).toContain("phraseto_tsquery");
   });
 
   it("maxPrice + category → đẩy filter vào SQL params + JOIN kind", async () => {
@@ -118,13 +119,19 @@ describe("resolveDishes", () => {
     expect(lexParams).toEqual(expect.arrayContaining([106, 10]));
   });
 
-  it("không origin → không chạm restaurants / ST_DWithin", async () => {
+  it("không origin → KHÔNG lọc cứng bán kính (ST_DWithin); lexical ORDER theo rating giảm dần", async () => {
     route([], []);
     await resolveDishes(["phở"]);
     for (const [sql] of queryMock.mock.calls) {
-      expect(sql).not.toContain("ST_DWithin");
-      expect(sql).not.toContain("JOIN restaurants");
+      expect(sql).not.toContain("ST_DWithin"); // không lọc cứng bán kính
     }
+    // Lexical vẫn JOIN restaurants để lấy rating, sắp giảm dần (giữ quán tốt khi cắt TOP_K).
+    const [lexSql] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
+    expect(lexSql).toContain("JOIN restaurants");
+    expect(lexSql).toContain("ORDER BY ord DESC NULLS LAST");
+    // KNN không origin vẫn không chạm restaurants.
+    const [knnSql] = queryMock.mock.calls.find((c) => isKnn(c[0]))!;
+    expect(knnSql).not.toContain("JOIN restaurants");
   });
 
   it("embed trả null (thiếu key) → chỉ chạy lexical", async () => {

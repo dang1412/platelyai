@@ -1,6 +1,6 @@
 import { query } from "./db";
 import { embedMany, toVectorLiteral } from "./embed";
-import { expandSynonyms, lexAlternationPattern } from "./synonyms";
+import { expandSynonyms } from "./synonyms";
 import type { FoodCategory, LatLng, MatchedDish } from "./types";
 
 // Bước 4 (nhánh MÓN) — map mỗi tên món user hỏi về các menu_items khớp, để bước rank gom về quán.
@@ -34,10 +34,11 @@ export const RADIUS_M = 1500;
 // Gom món từ 2 nguồn rồi dedup theo itemId (giữ dist nhỏ nhất):
 //  1) Semantic KNN trên menu_items.embedding — embed "Món: <tên>" (KHÔNG prefix khác, khớp đúng
 //     dạng đã sinh embedding trong DB), giữ dist <= DISH_DIST_THRESHOLD.
-//  2) Lexical: tên món xuất hiện như NGUYÊN TỪ trong name CÓ DẤU → dist = 0 (mạnh nhất), bắt khớp
-//     tên chính xác mà KNN có thể xếp thấp. KHÔNG dùng substring + unaccent: "chè" (3 ký tự) lọt
-//     vào "cheese"/"cá chép"; khớp ranh giới từ + giữ dấu loại sạch. Match thêm trên TÊN CATEGORY
-//     (dist = LEX_CATEGORY_DIST) cho ca tên món bị cắt theo category.
+//  2) Lexical (FTS): tên món khớp NGUYÊN TỪ trong name CÓ DẤU → dist = 0 (mạnh nhất), bắt khớp tên
+//     chính xác mà KNN có thể xếp thấp. Dùng full-text 'simple' (token theo phi-alnum, giữ dấu) để
+//     hit GIN index thay vì seq scan — vừa giữ ngữ nghĩa ranh-giới-từ ("chè" ⊄ "cheese") vừa
+//     sublinear khi DB lớn. + đồng nghĩa (synonyms.ts) → SYN_LEX_DIST. Match thêm trên TÊN CATEGORY
+//     (dist = LEX_CATEGORY_DIST) cho ca tên món bị cắt theo category. Xem plans/01_4b_synonyms.md.
 //
 // Lọc cứng NGAY trong SQL (không lọc sau — có LIMIT DISH_TOP_K, lọc sau sẽ đánh rơi món xếp > TOP_K):
 //  - maxPrice (yếu tố 5): mi.price <= maxPrice. price IS NULL bị loại khi có maxPrice, chấp nhận.
@@ -105,41 +106,66 @@ export async function resolveDishes(
       }
     }
 
-    // ── Lexical (+ đồng nghĩa) ──────────────────────────────────────────────────
-    // Mở rộng tên hỏi ra các biến thể đồng nghĩa (synonyms.ts). $1 = pattern CHỈ tên gốc (khớp →
-    // dist 0); $2 = pattern alternation GỒM cả đồng nghĩa (khớp → SYN_LEX_DIST). Cả hai khớp ranh
-    // giới từ trên lower(name) CÓ DẤU. variants[0] luôn là tên gốc.
+    // ── Lexical (+ đồng nghĩa), full-text search ─────────────────────────────────
+    // Mở rộng tên hỏi ra các biến thể đồng nghĩa (synonyms.ts), match qua FTS 'simple' để DÙNG
+    // ĐƯỢC GIN index (menu_items_name_fts_idx) — sublinear khi DB lớn, KHÔNG seq scan. 'simple' tách
+    // token theo phi-alnum + GIỮ DẤU → đúng ngữ nghĩa ranh-giới-từ cũ ("chè" ⊄ "cheese"). Mỗi biến
+    // thể → 1 phraseto_tsquery (cụm nhiều từ giữ thứ tự, vd "bún riêu" → bún<->riêu), OR bằng `||`.
+    // exactTsq = CHỈ tên gốc (variants[0]) → name_exact (dist 0); anyTsq = cả đồng nghĩa → SYN_LEX_DIST.
     const variants = expandSynonyms(queryDish);
-    const exactPattern = lexAlternationPattern([variants[0]]);
-    const anyPattern = lexAlternationPattern(variants);
-    const params: unknown[] = [exactPattern, anyPattern];
-    // Lọc kind: item phải thuộc category đúng kind (subquery riêng, tách khỏi OR match tên category).
+    const params: unknown[] = [];
+    const tsq = (v: string) => `phraseto_tsquery('simple', $${params.push(v)})`;
+    const anyTsq = variants.map(tsq).join(" || ");
+    const exactTsq = `phraseto_tsquery('simple', $1)`; // variants[0] = param $1 (push đầu tiên)
+    // Lọc kind/price — tham chiếu lại cùng $n ở CẢ HAI nhánh UNION (không push lại).
     const kindFilter =
       category != null
         ? `AND mi.category_id IN (SELECT id FROM menu_categories WHERE kind = $${params.push(category)})`
         : "";
     const priceFilter =
       maxPrice != null ? `AND mi.price <= $${params.push(maxPrice)}` : "";
-    // Có origin → INNER JOIN ST_DWithin lọc cứng bán kính + ORDER theo gần. Không origin → ORDER mi.id
-    // (xác định, tránh Postgres trả tuỳ thứ tự vật lý).
+    // ord quyết định MÓN nào sống sót khi cắt LIMIT DISH_TOP_K (món phổ biến match hàng nghìn dòng):
+    //  - Có origin → INNER JOIN ST_DWithin lọc cứng bán kính, ord = khoảng cách (gần nhất trước).
+    //  - Không origin → JOIN restaurants lấy rating, ord = rating GIẢM DẦN (giữ quán tốt thay vì
+    //    tùy tiện theo id). Tie-break theo mi.id cho xác định. JOIN restaurants tái dùng cho cả 2 nhánh.
     let join = "";
-    let orderBy = "ORDER BY mi.id";
+    let ord: string;
+    let orderClause: string;
     if (origin) {
       const g = geoJoin(params, origin);
       join = g.sql;
-      orderBy = `ORDER BY ST_Distance(r.location, ST_MakePoint($${g.lngI}, $${g.latI})::geography) ASC`;
+      ord = `ST_Distance(r.location, ST_MakePoint($${g.lngI}, $${g.latI})::geography)`;
+      orderClause = "ORDER BY ord ASC, id ASC";
+    } else {
+      join = "JOIN restaurants r ON r.id = mi.restaurant_id";
+      ord = "r.rating";
+      orderClause = "ORDER BY ord DESC NULLS LAST, id ASC";
     }
+    // UNION ALL hai nhánh để MỖI nhánh hit index riêng (gộp OR ép seq scan): nhánh TÊN dùng FTS GIN,
+    // nhánh CATEGORY resolve category qua FTS rồi lọc mi.category_id (btree). Trùng itemId giữa 2
+    // nhánh do add() dedup theo dist nhỏ nhất.
     const lex = await query<DishRow>(
-      `SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-              (lower(mi.name) ~ $1) AS name_exact,
-              (lower(mi.name) ~ $2) AS name_any
-       FROM menu_items mi
-       ${join}
-       WHERE (lower(mi.name) ~ $2
-          OR mi.category_id IN (SELECT id FROM menu_categories WHERE lower(category_name) ~ $2))
-         ${kindFilter}
-         ${priceFilter}
-       ${orderBy}
+      `SELECT id, restaurant_id, name, price, name_exact, name_any FROM (
+         SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
+                (to_tsvector('simple', lower(mi.name)) @@ (${exactTsq})) AS name_exact,
+                TRUE AS name_any, ${ord} AS ord
+         FROM menu_items mi
+         ${join}
+         WHERE to_tsvector('simple', lower(mi.name)) @@ (${anyTsq})
+           ${kindFilter}
+           ${priceFilter}
+         UNION ALL
+         SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
+                FALSE AS name_exact, FALSE AS name_any, ${ord} AS ord
+         FROM menu_items mi
+         ${join}
+         WHERE mi.category_id IN (
+                 SELECT id FROM menu_categories
+                 WHERE to_tsvector('simple', lower(category_name)) @@ (${anyTsq}))
+           ${kindFilter}
+           ${priceFilter}
+       ) u
+       ${orderClause}
        LIMIT ${DISH_TOP_K}`,
       params,
     );

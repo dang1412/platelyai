@@ -28,10 +28,13 @@ Gom từ **2 nguồn**, dedup theo `itemId` giữ `dist` nhỏ nhất:
 1. **Semantic KNN** trên `menu_items.embedding` — embed `"Món: <tên>"` (khớp dạng đã sinh embedding
    trong DB, xem [01_3_embed](./01_3_embed.md)). `ORDER BY embedding <=> vec LIMIT DISH_TOP_K`, giữ
    `dist <= DISH_DIST_THRESHOLD`. Bỏ qua nếu `embedMany` trả `null` (thiếu key) → vẫn còn lexical.
-2. **Lexical** — tên món khớp **ranh giới từ CÓ DẤU** trong `mi.name` (`dist=0`, mạnh nhất) hoặc
-   trong `menu_categories.category_name` (`dist=LEX_CATEGORY_DIST`, cho ca tên món bị cắt theo
-   category). KHÔNG substring + unaccent ("chè" lọt "cheese"). Regex được escape. **Đồng nghĩa thủ
-   công** (`rán`↔`chiên`, `bún riêu`↔`bún cua`…) cộng vào nhánh này — xem [01_4b_synonyms](./01_4b_synonyms.md).
+2. **Lexical (FTS)** — tên món khớp **ranh giới từ CÓ DẤU** trong `mi.name` (`dist=0`, mạnh nhất)
+   hoặc trong `menu_categories.category_name` (`dist=LEX_CATEGORY_DIST`, cho ca tên món bị cắt theo
+   category). Dùng full-text `to_tsvector('simple', lower(name)) @@ phraseto_tsquery(...)`: token theo
+   phi-alnum + GIỮ DẤU → đúng ngữ nghĩa ranh-giới-từ ("chè" ⊄ "cheese") **và** dùng được GIN index
+   (sublinear, không seq scan — xem perf dưới). Hai nhánh (name / category) tách **`UNION ALL`** để mỗi
+   nhánh hit index riêng. **Đồng nghĩa thủ công** (`rán`↔`chiên`, `bún riêu`↔`bún cua`…) cộng vào
+   nhánh này — xem [01_4b_synonyms](./01_4b_synonyms.md).
 
 **Lọc cứng NGAY trong SQL** (không lọc sau — có `LIMIT DISH_TOP_K` thì lọc sau đánh rơi món xếp > K):
 - `maxPrice` → `mi.price <= $n` (price NULL bị loại khi có maxPrice).
@@ -40,7 +43,9 @@ Gom từ **2 nguồn**, dedup theo `itemId` giữ `dist` nhỏ nhất:
 
 **Lọc cứng bán kính `RADIUS_M` khi có `origin`** (`ST_DWithin`, INNER JOIN restaurants) trên **cả
 KNN lẫn lexical** — sửa lại quyết định 01 §6.4 (xem ghi chú dưới). Quán `location` NULL bị loại.
-Không origin → `ORDER BY mi.id` (xác định, tránh Postgres trả tuỳ thứ tự vật lý).
+Không origin → lexical JOIN `restaurants` lấy rating, `ORDER BY rating DESC NULLS LAST, id` (giữ quán
+tốt khi cắt `LIMIT DISH_TOP_K` thay vì tùy tiện theo id; tie-break `id` cho xác định). KNN không origin
+giữ `ORDER BY embedding <=> vec` (đã là độ liên quan ngữ nghĩa).
 
 > **Vì sao lọc cứng trong query, không để rank cắt sau:** KNN HNSW trả TOP_K theo embedding trên
 > TOÀN DB, không biết địa lý. Khi data lên nhiều vùng, món phổ biến ("trà sữa") có hàng nghìn match
@@ -70,34 +75,31 @@ thẳng `rows`. SQL viết tay, tham số hoá `$1,$2…`.
   plan 01 §6.4 nhưng đảo lại vì recall + perf (xem ghi chú trên).
 - `drizzle sql` → `pg` parameterized.
 
-## Known limit — perf khi KHÔNG có origin (scale toàn quốc)
+## Perf lexical khi scale (✅ đã giải bằng FTS + UNION ALL)
 
-- **KNN**: chạy HNSW (`menu_items_embedding_idx`), dưới tuyến tính → ổn dù DB lớn, không có origin
-  cũng không lo.
-- **Lexical** (`seq scan toàn menu_items` khi không origin) có **3 nguyên nhân chồng nhau**, không
-  chỉ thiếu trgm index:
-  1. **Sai cột index**: query match `lower(mi.name)` (CÓ dấu, cố ý). Trgm index hiện có là
-     `menu_items_normalized_name_trgm_idx` trên `normalized_name` (KHÔNG dấu) → không khớp biểu thức.
-  2. **Thiếu index `menu_items.category_id`**: arm category `mi.category_id IN (SELECT … )` cần fetch
-     items theo `category_id`, nhưng schema không có index cột này (FK không tự tạo; chỉ có
-     `restaurant_id`, `normalized_name`, `embedding`).
-  3. **Hình dạng `OR ... IN (subquery)`**: Postgres khó gộp một index-scan (arm name) với một
-     semi-join subquery (arm category) vào `BitmapOr` → thường ép **seq scan** dù đã có đủ index.
-  Có origin thì `ST_DWithin` lọc restaurants (GIST) trước nên chỉ regex ít món; **không origin →
-  regex toàn bảng** × số tên món.
-- **Mức độ**: pilot 1 thành phố (vài chục nghìn món) seq scan chỉ vài–vài chục ms → chấp nhận. No-origin
-  cũng hiếm (thiết bị thường có toạ độ / geocode ra origin). Rủi ro chỉ ở scale toàn quốc (triệu món).
-- **Cách chữa khi cần** (làm CẢ CỤM, không chỉ thêm 1 index):
-  1. Trgm GIN đúng biểu thức: `CREATE INDEX … ON menu_items USING GIN (lower(name) gin_trgm_ops);`
-     và `CREATE INDEX … ON menu_categories USING GIN (lower(category_name) gin_trgm_ops);`. KHÔNG tái
-     dùng `normalized_name` (bỏ dấu, phá chủ đích match có dấu).
-  2. Btree `menu_items.category_id` cho arm category.
-  3. **Tách `OR` → `UNION`** (hoặc 2 pass): nhánh name dùng trgm(lower(name)), nhánh category dùng
-     trgm category + btree category_id — mỗi nhánh hit index riêng.
-  `EXPLAIN ANALYZE` xác nhận Seq Scan → Bitmap Index Scan. Chưa làm bây giờ.
-  > **Không** rút gọn thành lexical-chỉ-category (rẻ & dễ index hơn vì hết `OR`): mất arm name =
-  > mất khớp tên CÓ DẤU `dist=0` — giá trị chính của tầng lexical, đẩy hết gánh nặng match tên sang
-  > KNN (vốn hay xếp tên khớp thấp).
+Trước đây nhánh lexical **seq scan toàn `menu_items`** khi không origin (3 nguyên nhân chồng nhau:
+sai cột index — trgm trên `normalized_name` KHÔNG dấu ≠ query có dấu; thiếu btree `category_id`; hình
+dạng `OR … IN (subquery)` ép `BitmapOr` fail). Đo thật "gà rán" no-origin: **40ms, bỏ ~10.900 dòng qua
+filter regex**. Pilot vài chục nghìn món thì chấp nhận, nhưng tuyến tính → triệu món thành giây.
+
+**Giải pháp đã làm** (cả cụm, không chỉ 1 index):
+1. **FTS thay regex**: `to_tsvector('simple', lower(name)) @@ phraseto_tsquery('simple', <biến thể>)`.
+   `simple` = token theo phi-alnum, KHÔNG stem/stopword, **giữ dấu** → đúng ngữ nghĩa ranh-giới-từ cũ
+   (verify: FTS cho **đúng 445 món y hệt regex**, 0 lệch). Khác trgm regex: GIN extract token đoán định,
+   index dùng được chắc chắn (trgm trên anchored-alternation `~` trích trigram kém).
+2. **Index** (`db/init/01_schema.sql`): `menu_items_name_fts_idx` GIN `to_tsvector('simple',lower(name))`,
+   `menu_categories_name_fts_idx` tương tự, btree `menu_items_category_id_idx`. Biểu thức index PHẢI
+   khớp đúng query.
+3. **Tách `OR` → `UNION ALL`**: nhánh name (FTS GIN) ⊎ nhánh category (FTS trên `menu_categories` →
+   `mi.category_id IN (…)` dùng btree). `add()` dedup itemId trùng giữa 2 nhánh theo dist nhỏ nhất.
+
+`EXPLAIN ANALYZE` xác nhận: **không còn Seq Scan**, đều Bitmap Index Scan / Index Scan, **40ms → 9.6ms**
+(và sublinear theo số match, không theo size bảng). Ca có origin vốn đã ổn (GIST `ST_DWithin` lọc trước).
+
+> **Không** rút gọn thành lexical-chỉ-category: mất arm name = mất khớp tên CÓ DẤU `dist=0` — giá trị
+> chính của tầng lexical, đẩy hết gánh nặng match tên sang KNN (vốn hay xếp tên khớp thấp).
+> Index cũ `menu_items_normalized_name_trgm_idx` (không dấu) nay không query nào dùng — giữ vì script
+> sinh embedding còn ghi `normalized_name`; có thể drop sau.
 
 ## Test (`app/src/lib/dishes.test.ts`, vitest — mock `./db` + `./embed`)
 

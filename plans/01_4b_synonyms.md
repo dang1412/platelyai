@@ -33,31 +33,32 @@ nhưng không gánh việc tách đồng nghĩa.
 - `expandSynonyms(q)` → các biến thể tên món (thay cụm đồng nghĩa khớp ranh giới từ). **Query gốc
   luôn ở `[0]`** (call site dựa vào để phân biệt đích danh vs đồng nghĩa). Compose qua nhiều nhóm
   (`"gà chiên nướng"` → 4 biến thể), chặn bùng nổ bằng `MAX_VARIANTS = 16`.
-- `lexAlternationPattern(terms)` → 1 pattern POSIX cho `~` của Postgres khớp **bất kỳ** term như
-  nguyên từ; cùng quy ước `[:alnum:]` + escape regex như nhánh lexical cũ.
+  Mỗi biến thể được đẩy thành 1 param `phraseto_tsquery('simple', $n)` ở call site (chống injection).
 
-## Cắm vào nhánh lexical — 2 pattern thay vì 1
+## Cắm vào nhánh lexical — 2 tsquery (FTS), UNION ALL
 
-Để đích danh vẫn thắng đồng nghĩa, dùng 2 param:
+Để đích danh vẫn thắng đồng nghĩa, dùng 2 tsquery (mỗi biến thể 1 `phraseto_tsquery`, OR bằng `||`):
 
-| param | pattern | khớp `mi.name` → dist |
+| tsquery | gồm | khớp `mi.name` → dist |
 |---|---|---|
-| `$1` | chỉ tên gốc (`variants[0]`) | `0` — đích danh, mạnh nhất |
-| `$2` | gốc + tất cả đồng nghĩa | `SYN_LEX_DIST = 0.03` |
-| (chỉ khớp tên category qua `$2`) | — | `LEX_CATEGORY_DIST = 0.05` |
+| `exactTsq` | chỉ tên gốc (`variants[0]`) | `0` — đích danh, mạnh nhất |
+| `anyTsq` | gốc + tất cả đồng nghĩa | `SYN_LEX_DIST = 0.03` |
+| (chỉ khớp tên category qua `anyTsq`) | — | `LEX_CATEGORY_DIST = 0.05` |
 
 ```sql
-SELECT ..., (lower(mi.name) ~ $1) AS name_exact,
-            (lower(mi.name) ~ $2) AS name_any
-WHERE (lower(mi.name) ~ $2
-   OR mi.category_id IN (SELECT id FROM menu_categories WHERE lower(category_name) ~ $2))
+-- nhánh name (FTS GIN) ⊎ nhánh category (FTS menu_categories → btree category_id)
+SELECT ..., (to_tsvector('simple', lower(mi.name)) @@ exactTsq) AS name_exact, TRUE AS name_any
+FROM menu_items mi WHERE to_tsvector('simple', lower(mi.name)) @@ anyTsq
+UNION ALL
+SELECT ..., FALSE, FALSE FROM menu_items mi
+WHERE mi.category_id IN (SELECT id FROM menu_categories WHERE to_tsvector('simple', lower(category_name)) @@ anyTsq)
 ```
 ```ts
 add(r, r.name_exact ? 0 : r.name_any ? SYN_LEX_DIST : LEX_CATEGORY_DIST, queryDish);
 ```
 
-`name_any` bao gồm cả gốc (gốc ∈ alternation) → kiểm `name_exact` trước. KNN / geo / price / kind
-**không đổi** — chỉ thay cách build pattern lexical.
+`anyTsq` bao gồm cả gốc → kiểm `name_exact` trước. KNN / geo / price / kind **không đổi**. FTS vừa
+giữ ngữ nghĩa ranh-giới-từ vừa dùng GIN index — xem perf ở [01_4_dishes](./01_4_dishes.md#perf-lexical-khi-scale--đã-giải-bằng-fts--union-all).
 
 ## Hằng số (tunable) — thêm vào bảng 01.4
 
@@ -68,16 +69,12 @@ add(r, r.name_exact ? 0 : r.name_any ? SYN_LEX_DIST : LEX_CATEGORY_DIST, queryDi
 Đặt `SYN_LEX_DIST < COVERAGE_DIST_THRESHOLD (0.20)` → đồng nghĩa **VẪN tính coverage** (đã curate
 đúng, khác semantic mờ), nhưng **> 0** nên món trùng tên đích danh (`dist=0`) luôn thắng khi chọn chip.
 
-## Lưu ý perf
+## Test
 
-`$2` mở rộng thành alternation nhiều term → regex phức tạp hơn chút, nhưng vẫn là 1 lần quét như
-cũ. Mọi known-limit seq-scan ở [01_4_dishes](./01_4_dishes.md#known-limit--perf-khi-không-có-origin-scale-toàn-quốc)
-giữ nguyên (chữa bằng cụm trgm GIN + tách `OR`→`UNION` khi cần).
-
-## Test (`app/src/lib/dishes.test.ts`)
-
-Thêm: hỏi `"gà rán"` → `$2` chứa biến thể `"chiên"`, khớp `"Gà chiên giòn"` → `SYN_LEX_DIST`. Các
-mock lexical cũ đổi `name_match` → `name_exact`/`name_any`.
+- `synonyms.test.ts`: `expandSynonyms` (query-first, khớp nguyên-từ không phải từ-con, `bánh mỳ`↔`bánh
+  mì`, compose đa tầng, không đệ quy rác, bounded).
+- `dishes.test.ts`: hỏi `"gà rán"` → biến thể `"gà chiên"` vào params + SQL chứa `phraseto_tsquery`,
+  khớp `"Gà chiên giòn"` → `SYN_LEX_DIST`. Mock lexical dùng `name_exact`/`name_any`.
 
 ## Hiệu chỉnh theo DB thật
 

@@ -65,15 +65,6 @@ export function expandSynonyms(query: string): string[] {
   return [q, ...[...variants].filter((v) => v !== q)];
 }
 
-// Pattern POSIX cho toán tử `~` của Postgres: khớp BẤT KỲ term nào như nguyên từ (ranh giới phi-alnum
-// hai đầu). Dùng đúng quy ước [:alnum:] + escape như nhánh lexical cũ trong dishes.ts.
-export function lexAlternationPattern(terms: string[]): string {
-  const alt = terms
-    .map((t) => t.toLowerCase().trim().replace(/[.^$*+?()[\]{}|\\]/g, "\\$&"))
-    .join("|");
-  return `(^|[^[:alnum:]])(${alt})([^[:alnum:]]|$)`;
-}
-
 // — helpers ranh giới từ phía JS (Unicode, để xử lý cụm có dấu khi sinh biến thể) —
 function wordBoundary(term: string): RegExp {
   const esc = term.replace(/[.^$*+?()[\]{}|\\]/g, "\\$&");
