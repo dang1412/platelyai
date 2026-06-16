@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import SearchBar from "@/components/SearchBar";
 import RestaurantCard, { fmtVnd } from "@/components/RestaurantCard";
+import RestaurantModal from "@/components/RestaurantModal";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import type {
   LatLng,
@@ -22,6 +23,7 @@ export default function Home() {
   const [results, setResults] = useState<RestaurantSummary[]>([]);
   const [parsed, setParsed] = useState<ParsedQuery | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const { coords, status: geoStatus, request: requestGeo, clear: clearGeo } =
     useGeolocation();
 
@@ -48,6 +50,29 @@ export default function Home() {
 
     return () => controller.abort();
   }, [query, coords]);
+
+  // Mở/đóng modal chi tiết quán có đồng bộ URL (?quan=<id>) để chia sẻ được link.
+  // pushState giữ history → nút back của trình duyệt sẽ đóng modal.
+  const openRestaurant = (id: number) => {
+    setSelectedId(id);
+    window.history.pushState(null, "", `?quan=${id}`);
+  };
+  const closeRestaurant = () => {
+    setSelectedId(null);
+    window.history.pushState(null, "", window.location.pathname);
+  };
+
+  // Đọc ?quan khi tải trang (mở thẳng từ link chia sẻ) + xử lý nút back/forward.
+  useEffect(() => {
+    const sync = () => {
+      const raw = new URLSearchParams(window.location.search).get("quan");
+      const id = raw ? Number(raw) : NaN;
+      setSelectedId(Number.isInteger(id) ? id : null);
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
@@ -157,10 +182,22 @@ export default function Home() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {results.map((r) => (
-            <RestaurantCard key={r.id} restaurant={r} />
+            <RestaurantCard
+              key={r.id}
+              restaurant={r}
+              onClick={() => openRestaurant(r.id)}
+            />
           ))}
         </div>
       )}
+
+      <RestaurantModal
+        key={selectedId ?? "none"}
+        restaurantId={selectedId}
+        onClose={closeRestaurant}
+        searchLocation={coords ? null : (parsed?.location ?? null)}
+        distanceM={results.find((r) => r.id === selectedId)?.distanceM ?? null}
+      />
     </div>
   );
 }

@@ -11,8 +11,10 @@ export function fmtVnd(p: number): string {
 
 export default function RestaurantCard({
   restaurant,
+  onClick,
 }: {
   restaurant: RestaurantSummary;
+  onClick: () => void;
 }) {
   const tags = restaurant.tags ?? [];
   const matchedDishes = restaurant.matchedDishes ?? [];
@@ -21,15 +23,10 @@ export default function RestaurantCard({
       ? (restaurant.distanceM / 1000).toFixed(1)
       : null;
 
-  const href = restaurant.googlePlaceId
-    ? `https://www.google.com/maps/place/?q=place_id:${restaurant.googlePlaceId}`
-    : restaurant.website ?? null;
-
   return (
-    <a
-      href={href ?? undefined}
-      target={href ? "_blank" : undefined}
-      rel={href ? "noopener noreferrer" : undefined}
+    <button
+      type="button"
+      onClick={onClick}
       className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <div className="flex items-start justify-between gap-2">
@@ -92,6 +89,6 @@ export default function RestaurantCard({
           </div>
         )
       )}
-    </a>
+    </button>
   );
 }
