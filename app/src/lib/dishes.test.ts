@@ -84,6 +84,20 @@ describe("resolveDishes", () => {
     expect(lexParams).toContain(50000);
   });
 
+  it("wantsCheap → cap mỗi quán chèn price ASC (giữ món khớp rẻ nhất)", async () => {
+    route([], []);
+    await resolveDishes(["phở"], null, null, null, true);
+    const [lexSql] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
+    expect(lexSql).toContain("u.price ASC NULLS LAST");
+  });
+
+  it("không wantsCheap → cap KHÔNG chèn price (giữ thứ tự khớp tên)", async () => {
+    route([], []);
+    await resolveDishes(["phở"]);
+    const [lexSql] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
+    expect(lexSql).not.toContain("u.price ASC");
+  });
+
   it("có origin → lexical lọc cứng bán kính (ST_DWithin) + ORDER theo gần", async () => {
     route([], []);
     await resolveDishes(["phở"], null, null, { lat: 10, lng: 106 });

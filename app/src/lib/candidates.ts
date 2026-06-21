@@ -52,13 +52,17 @@ function toSummary(r: Record<string, unknown>): RestaurantSummary {
 // THUẦN (test được không cần DB): gom MatchedDish về quán đã fetch.
 //  - coverage = số queryDish khớp CHẮC (dist <= COVERAGE_DIST_THRESHOLD) / tổng số món hỏi.
 //  - matchQuality = 1 - minDist/DISH_DIST_THRESHOLD (khớp ngữ nghĩa tốt nhất của quán).
-//  - matchedDishes = tối đa 3 chip, ưu tiên dist nhỏ; có maxPrice thì đồng-dist ưu tiên món SÁT
-//    GIÁ TRẦN (món sát trần mới "ăn được" trong tầm tiền, đỡ chip nước chấm rẻ).
+//  - matchedDishes = tối đa 3 chip; mặc định ưu tiên dist nhỏ. maxPrice → đồng-dist ưu tiên món SÁT
+//    GIÁ TRẦN (món sát trần mới "ăn được" trong tầm tiền, đỡ chip nước chấm rẻ). wantsCheap (không
+//    maxPrice) → ưu tiên món RẺ trước (chip = đúng món rẻ user muốn) + set cheapness để rerank ưu
+//    tiên quán có món khớp rẻ. cheapness tính trên CÁC MÓN KHỚP đã giữ (cap SQL đã ưu tiên giữ món rẻ
+//    nhất trong nhóm khớp tên), KHÔNG phải món rẻ nhất toàn menu — đúng ngữ nghĩa "quán này, MÓN NÀY rẻ".
 // Quán có trong matched nhưng không có trong summaryById (đã bị fetch lọc) → bỏ.
 export function assembleDishCandidates(
   matched: MatchedDish[],
   summaryById: Map<number, RestaurantSummary>,
   maxPrice: number | null,
+  wantsCheap: boolean = false,
 ): Candidate[] {
   type Group = {
     covered: Set<string>;
@@ -80,23 +84,38 @@ export function assembleDishCandidates(
   }
   const numDishes = new Set(matched.map((d) => d.queryDish)).size || 1;
 
+  // cheap chỉ tác động khi wantsCheap mà KHÔNG có maxPrice (maxPrice là ràng buộc định lượng, chip
+  // ưu tiên SÁT TRẦN thắng — đồng bộ thứ tự ưu tiên của nhánh QUÁN).
+  const cheap = wantsCheap && maxPrice == null;
+
   const out: Candidate[] = [];
   for (const [rid, g] of groups) {
     const summary = summaryById.get(rid);
     if (!summary) continue;
-    summary.matchedDishes = [...g.items.values()]
-      .sort(
-        (a, b) =>
-          a.dist - b.dist ||
-          (maxPrice != null ? (b.price ?? 0) - (a.price ?? 0) : 0),
+    const items = [...g.items.values()];
+    summary.matchedDishes = items
+      .sort((a, b) =>
+        cheap
+          ? (a.price ?? Infinity) - (b.price ?? Infinity) || a.dist - b.dist
+          : a.dist - b.dist ||
+            (maxPrice != null ? (b.price ?? 0) - (a.price ?? 0) : 0),
       )
       .slice(0, 3)
       .map((it) => ({ name: it.name, price: it.price }));
-    out.push({
+    const candidate: Candidate = {
       summary,
       coverage: g.covered.size / numDishes,
       matchQuality: clamp01(1 - g.minDist / DISH_DIST_THRESHOLD),
-    });
+    };
+    if (cheap) {
+      // Giá rẻ nhất trong các món khớp đã giữ (>0 để bỏ món 0đ/khuyến mãi nhiễu).
+      const prices = items
+        .map((it) => it.price)
+        .filter((p): p is number => p != null && p > 0);
+      const minPrice = prices.length ? Math.min(...prices) : null;
+      candidate.cheapness = minPrice != null ? clamp01(1 - minPrice / CHEAP_REF) : 0;
+    }
+    out.push(candidate);
   }
   return out;
 }
@@ -110,6 +129,7 @@ export async function candidatesFromDishes(
     parsed.maxPrice,
     parsed.category,
     origin,
+    parsed.wantsCheap,
   );
   if (matched.length === 0) return [];
 
@@ -128,7 +148,7 @@ export async function candidatesFromDishes(
     params,
   );
   const summaryById = new Map(rows.map((r) => [Number(r.id), toSummary(r)]));
-  return assembleDishCandidates(matched, summaryById, parsed.maxPrice);
+  return assembleDishCandidates(matched, summaryById, parsed.maxPrice, parsed.wantsCheap);
 }
 
 // ── Nhánh QUÁN ──────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 > Bước cuối của [Search API](./01_search_api.md). Files: `app/src/app/api/search/route.ts`,
 > `app/src/lib/candidates.ts`, `app/src/lib/tags.ts`.
-> Trạng thái: **✅ xong** — 6/6 test (assembleDishCandidates), typecheck + lint sạch.
+> Trạng thái: **✅ xong** — 9/9 test (assembleDishCandidates, gồm wantsCheap), typecheck + lint sạch.
 
 ## Luồng (một luồng duy nhất, bỏ hết "mode" cũ)
 
@@ -31,8 +31,14 @@ lại sau). Nhồi vào prompt extract + validate yếu tố `tags`.
 3. **`assembleDishCandidates`** (THUẦN, test được): gom item về quán →
    - `coverage` = số `queryDish` khớp CHẮC (`dist ≤ COVERAGE_DIST_THRESHOLD`) / tổng món hỏi.
    - `matchQuality` = `1 - minDist/DISH_DIST_THRESHOLD`.
-   - `matchedDishes` = ≤3 chip, ưu tiên `dist` nhỏ; có `maxPrice` thì đồng-dist ưu tiên món **sát
-     giá trần** (đỡ chip nước chấm rẻ). Quán không fetch được (ngoài bán kính) → bỏ.
+   - `matchedDishes` = ≤3 chip, mặc định ưu tiên `dist` nhỏ; có `maxPrice` thì đồng-dist ưu tiên món
+     **sát giá trần** (đỡ chip nước chấm rẻ). Quán không fetch được (ngoài bán kính) → bỏ.
+   - **wantsCheap** (yếu tố 6, khi **không** maxPrice): chip ưu tiên món **RẺ trước** + set
+     `cheapness = 1 - minPrice/CHEAP_REF` từ **món khớp rẻ nhất đã giữ** (>0đ). Cap ở
+     [01_4](./01_4_dishes.md) đã chèn `price ASC` nên 3 món giữ lại là món khớp rẻ nhất → `cheapness`
+     đúng nghĩa "quán này, MÓN NÀY rẻ" (không phải món rẻ nhất toàn menu). maxPrice ⊻ wantsCheap:
+     maxPrice thắng (chip sát trần, không set `cheapness`). Trước đây nhánh MÓN **bỏ qua** wantsCheap
+     → `cheapness` luôn `undefined`, SORT_BOOST nhân 0 vô hiệu; nay đã vá.
 
 ### Nhánh QUÁN — `candidatesNearbyOrTop(parsed, origin)`
 - **maxPrice** → `EXISTS` món đúng kind `≤ giá`; bỏ `serves_*`. Chip món **đắt nhất ≤ trần**.
@@ -57,4 +63,5 @@ Thìn") để bắt quán không-menu mà tên đã lộ món.
 ## Test (`app/src/lib/candidates.test.ts`, vitest — thuần)
 
 coverage chỉ đếm khớp chắc · matchQuality từ minDist · chip ≤3 ưu tiên dist · maxPrice → đồng-dist
-ưu tiên sát trần · quán ngoài summaryById bị bỏ · dedup item theo tên giữ dist nhỏ nhất.
+ưu tiên sát trần · wantsCheap → chip rẻ trước + cheapness (bỏ món 0đ) · wantsCheap⊻maxPrice maxPrice
+thắng · quán ngoài summaryById bị bỏ · dedup item theo tên giữ dist nhỏ nhất.

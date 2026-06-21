@@ -61,6 +61,7 @@ export async function resolveDishes(
   maxPrice: number | null = null,
   category: FoodCategory | null = null,
   origin: LatLng | null = null,
+  wantsCheap: boolean = false,
 ): Promise<MatchedDish[]> {
   const names = dishes.map((d) => d.trim()).filter(Boolean);
   if (names.length === 0) return [];
@@ -155,11 +156,17 @@ export async function resolveDishes(
     // Cap DISH_PER_RESTAURANT món/quán (ROW_NUMBER partition theo quán) TRƯỚC khi cắt TOP_K, để pool
     // trải đều ra nhiều quán thay vì dồn vào vài quán menu to. Ưu tiên giữ món khớp tên đích danh
     // (name_exact) rồi đồng nghĩa (name_any) khi chọn món đại diện của quán.
+    // wantsCheap (yếu tố 6): chèn `price ASC` vào SAU tier khớp tên → quán giữ lại 3 món khớp RẺ nhất
+    // (vẫn trong nhóm khớp chuẩn nhất, không để đồ phụ rẻ đè món chính). Vì cap chạy TRƯỚC TOP_K, đây
+    // cũng là cách DUY NHẤT đảm bảo món rẻ sống sót để downstream tính cheapness + chip đúng món rẻ.
+    const capOrder = wantsCheap
+      ? "u.name_exact DESC, u.name_any DESC, u.price ASC NULLS LAST, u.id ASC"
+      : "u.name_exact DESC, u.name_any DESC, u.id ASC";
     const lex = await query<DishRow>(
       `SELECT id, restaurant_id, name, price, name_exact, name_any FROM (
          SELECT u.*, ROW_NUMBER() OVER (
                   PARTITION BY u.restaurant_id
-                  ORDER BY u.name_exact DESC, u.name_any DESC, u.id ASC
+                  ORDER BY ${capOrder}
                 ) AS rn
          FROM (
            SELECT mi.id, mi.restaurant_id, mi.name, mi.price,

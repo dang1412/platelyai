@@ -9,6 +9,9 @@
 # Symlink tham khảo code cũ (local-only, trỏ ra ngoài repo)
 /old
 
+# DB backup dumps (local-only)
+/backups
+
 # OS / editor
 .DS_Store
 *.swp
