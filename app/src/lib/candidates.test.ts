@@ -61,6 +61,35 @@ describe("assembleDishCandidates", () => {
     expect(c.summary.matchedDishes?.[0].name).toBe("sát trần");
   });
 
+  it("wantsCheap: chip ưu tiên món RẺ trước + set cheapness từ món khớp rẻ nhất", () => {
+    const matched = [
+      dish({ restaurantId: 1, queryDish: "phở", dist: 0, name: "Phở đặc biệt", price: 80000 }),
+      dish({ restaurantId: 1, queryDish: "phở", dist: 0, name: "Phở bò", price: 40000 }),
+    ];
+    const [c] = assembleDishCandidates(matched, mapOf(1), null, true);
+    expect(c.summary.matchedDishes?.[0].name).toBe("Phở bò"); // rẻ trước
+    expect(c.cheapness).toBeCloseTo(1 - 40000 / 40000); // 0 tại mốc CHEAP_REF
+  });
+
+  it("wantsCheap: bỏ qua món 0đ khi tính cheapness (lấy giá > 0 rẻ nhất)", () => {
+    const matched = [
+      dish({ restaurantId: 1, queryDish: "phở", dist: 0, name: "KM 0đ", price: 0 }),
+      dish({ restaurantId: 1, queryDish: "phở", dist: 0, name: "Phở bò", price: 20000 }),
+    ];
+    const [c] = assembleDishCandidates(matched, mapOf(1), null, true);
+    expect(c.cheapness).toBeCloseTo(1 - 20000 / 40000); // 0.5, không phải từ 0đ
+  });
+
+  it("wantsCheap KÈM maxPrice: maxPrice thắng (chip sát trần, không set cheapness)", () => {
+    const matched = [
+      dish({ restaurantId: 1, queryDish: "x", dist: 0, name: "rẻ", price: 10000 }),
+      dish({ restaurantId: 1, queryDish: "x", dist: 0, name: "sát trần", price: 45000 }),
+    ];
+    const [c] = assembleDishCandidates(matched, mapOf(1), 50000, true);
+    expect(c.summary.matchedDishes?.[0].name).toBe("sát trần");
+    expect(c.cheapness).toBeUndefined();
+  });
+
   it("quán không có trong summaryById (bị fetch lọc) → bỏ", () => {
     const matched = [
       dish({ restaurantId: 1, queryDish: "phở", dist: 0.1 }),

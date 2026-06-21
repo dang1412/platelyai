@@ -1,7 +1,7 @@
 # Plan 01.4 — Dishes (nhánh MÓN: tên món → menu_items khớp)
 
 > Bước 4 (nhánh MÓN) của [Search API](./01_search_api.md). Files: `app/src/lib/dishes.ts`, `app/src/lib/db.ts`.
-> Trạng thái: **✅ xong** — 7/7 test xanh (dedup, ngưỡng KNN, lexical name/category, filter, origin, no-key), typecheck sạch.
+> Trạng thái: **✅ xong** — 9/9 test xanh (dedup, ngưỡng KNN, lexical name/category, filter, origin, no-key, wantsCheap cap), typecheck sạch.
 
 ## Mục tiêu
 
@@ -16,6 +16,7 @@ function resolveDishes(
   maxPrice: number | null,        // yếu tố 5 — lọc cứng giá MỘT món
   category: FoodCategory | null,  // yếu tố 1 — lọc cứng mc.kind
   origin: LatLng | null,          // chỉ để ORDER lexical, KHÔNG lọc bán kính
+  wantsCheap: boolean,            // yếu tố 6 — chèn price ASC vào cap mỗi quán (giữ món rẻ)
 ): Promise<MatchedDish[]>          // các menu_items khớp, đã dedup theo itemId
 ```
 
@@ -40,6 +41,13 @@ Gom từ **2 nguồn**, dedup theo `itemId` giữ `dist` nhỏ nhất:
 - `maxPrice` → `mi.price <= $n` (price NULL bị loại khi có maxPrice).
 - `category` → `mc.kind = $n` (**quyết định 01 §6.2**); KNN JOIN `menu_categories`, lexical dùng
   subquery `category_id IN (SELECT id FROM menu_categories WHERE kind=$n)`.
+
+**Cap `DISH_PER_RESTAURANT=3` món/quán** (`ROW_NUMBER` partition theo quán) chạy **TRƯỚC** `LIMIT
+DISH_TOP_K` để pool trải đều ra nhiều quán thay vì dồn vào vài quán menu to. Thứ tự giữ món: khớp tên
+đích danh (`name_exact`) → đồng nghĩa (`name_any`) → `id`. Khi `wantsCheap` (yếu tố 6) **chèn `price ASC
+NULLS LAST` vào SAU tier khớp tên** → mỗi quán giữ 3 món khớp **rẻ nhất trong nhóm khớp chuẩn nhất**
+(không để đồ phụ rẻ khớp-category đè món chính). Vì cap chạy trước TOP_K, đây là cách **duy nhất** đảm
+bảo món rẻ sống sót để rank tính `cheapness` + chip hiển thị đúng món rẻ (xem [01_6](./01_6_route.md)).
 
 **Lọc cứng bán kính `RADIUS_M` khi có `origin`** (`ST_DWithin`, INNER JOIN restaurants) trên **cả
 KNN lẫn lexical** — sửa lại quyết định 01 §6.4 (xem ghi chú dưới). Quán `location` NULL bị loại.
@@ -105,4 +113,5 @@ filter regex**. Pilot vài chục nghìn món thì chấp nhận, nhưng tuyến
 
 dishes rỗng → `[]` không gọi DB · dedup giữ dist nhỏ · KNN bỏ `dist > threshold` · lexical name=0 /
 category=0.05 · `maxPrice+category` đẩy đúng JOIN/kind/params · origin → `ST_DWithin` trên CẢ KNN
-lẫn lexical · không origin → không chạm restaurants · embed `null` → chỉ lexical.
+lẫn lexical · không origin → không chạm restaurants · embed `null` → chỉ lexical · wantsCheap → cap
+chèn `price ASC` (không wantsCheap thì không).
