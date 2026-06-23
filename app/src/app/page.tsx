@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import AuthButton from "@/components/AuthButton";
 import SearchBar from "@/components/SearchBar";
 import RestaurantCard, { fmtVnd } from "@/components/RestaurantCard";
 import RestaurantModal from "@/components/RestaurantModal";
@@ -77,7 +78,10 @@ export default function Home() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-      <header className="mb-8 text-center">
+      <header className="relative mb-8 text-center">
+        <div className="absolute right-0 top-0">
+          <AuthButton />
+        </div>
         <h1 className="flex justify-center">
           <Image
             src="/logo.png"
