@@ -87,7 +87,6 @@ export type RestaurantDetail = {
 
 // Link Google Maps: ưu tiên place_id (chính xác), fallback tìm theo tên.
 export function mapUrl(placeId: string | null, name: string): string {
-  return placeId
-    ? `https://www.google.com/maps/place/?q=place_id:${placeId}`
-    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+  const query = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+  return placeId ? `${query}&query_place_id=${placeId}` : query;
 }
