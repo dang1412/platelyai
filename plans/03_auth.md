@@ -57,6 +57,12 @@ psql "$DATABASE_URL" -f db/init/02_auth.sql
 - Header trang chủ (`page.tsx`): `<AuthButton/>` góc trên phải — chưa login = nút "Đăng nhập";
   đã login = avatar + menu (email, "Trang quản trị" nếu admin, "Đăng xuất"). Cần `SessionProvider`
   (`components/Providers.tsx`) bọc ở `layout.tsx`.
+- **Login dạng popup (không chuyển trang):** OAuth của NextAuth mặc định redirect cả trang. Để mở
+  popup, `AuthButton` mở `window.open('/auth/popup-start')` → trang đó chạy `signIn('google',
+  {callbackUrl:'/auth/popup-done'})` trong popup → `/auth/popup-done` `postMessage` về trang cha rồi
+  `window.close()` → cha nghe message và gọi `useSession().update()` refetch (không reload). Popup bị
+  chặn thì fallback `signIn('google')` redirect. Server action `signIn` ở `/login` vẫn giữ làm fallback
+  khi vào thẳng `/admin` lúc chưa login.
 - `next.config.ts`: cho phép `lh3.googleusercontent.com` (avatar Google) trong `images.remotePatterns`.
 
 ## Env cần có (`.env` ở root, app symlink `app/.env`)

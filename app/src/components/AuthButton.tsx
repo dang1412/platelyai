@@ -1,14 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 
 // Nút đăng nhập / avatar cho header. Dùng useSession (cần SessionProvider ở layout).
 export default function AuthButton() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [open, setOpen] = useState(false);
+
+  // Đăng nhập qua popup: KHÔNG chuyển trang. Popup chạy OAuth rồi postMessage về
+  // (xem /auth/popup-start + /auth/popup-done); nhận được thì update() refetch session.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.origin === window.location.origin && e.data === "plately-auth-success") {
+        update();
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [update]);
+
+  const loginPopup = useCallback(() => {
+    const w = 480;
+    const h = 640;
+    const left = window.screenX + (window.outerWidth - w) / 2;
+    const top = window.screenY + (window.outerHeight - h) / 3;
+    const popup = window.open(
+      "/auth/popup-start",
+      "plately-login",
+      `width=${w},height=${h},left=${left},top=${top}`,
+    );
+    // Popup bị trình duyệt chặn -> fallback về luồng redirect cả trang.
+    if (!popup) signIn("google");
+  }, []);
 
   if (status === "loading") {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />;
@@ -18,7 +44,7 @@ export default function AuthButton() {
     return (
       <button
         type="button"
-        onClick={() => signIn("google")}
+        onClick={loginPopup}
         className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
       >
         Đăng nhập
