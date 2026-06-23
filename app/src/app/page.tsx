@@ -85,7 +85,7 @@ export default function Home() {
             width={713}
             height={233}
             priority
-            className="h-12 w-auto"
+            className="h-16 w-auto"
           />
         </h1>
         <p className="mt-1 text-zinc-500 dark:text-zinc-400">
