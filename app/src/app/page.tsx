@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import SearchBar from "@/components/SearchBar";
 import RestaurantCard, { fmtVnd } from "@/components/RestaurantCard";
 import RestaurantModal from "@/components/RestaurantModal";
@@ -77,8 +78,15 @@ export default function Home() {
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
       <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-          🍜 Plately
+        <h1 className="flex justify-center">
+          <Image
+            src="/logo.png"
+            alt="platelyai"
+            width={713}
+            height={233}
+            priority
+            className="h-12 w-auto"
+          />
         </h1>
         <p className="mt-1 text-zinc-500 dark:text-zinc-400">
           Tìm quán ăn ngon gần Vinhomes Ocean Park
