@@ -12,3 +12,6 @@
 
 ## Done khi
 - Lint/test/build xanh; luồng tạo→sửa hoạt động; PR mở.
+
+## Commit / PR
+PR: https://github.com/dang1412/platelyai/pull/10
