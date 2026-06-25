@@ -85,8 +85,21 @@ export type RestaurantDetail = {
   menu: MenuCategory[];
 };
 
-// Link Google Maps: ưu tiên place_id (chính xác), fallback tìm theo tên.
-export function mapUrl(placeId: string | null, name: string): string {
-  const query = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
-  return placeId ? `${query}&query_place_id=${placeId}` : query;
+// Link Google Maps theo thứ tự chính xác giảm dần:
+//  1. place_id (quán crawl từ Google) → mở đúng địa điểm.
+//  2. lat/lng (quán thêm tay, không place_id) → mở đúng toạ độ đã lưu, không lệch theo tên.
+//  3. fallback → tìm theo tên.
+export function mapUrl(
+  placeId: string | null,
+  name: string,
+  lat?: number | null,
+  lng?: number | null,
+): string {
+  if (placeId) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${placeId}`;
+  }
+  if (lat != null && lng != null) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
 }
