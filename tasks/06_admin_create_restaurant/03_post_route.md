@@ -22,3 +22,6 @@ Cần endpoint tạo quán mới, chỉ cho admin, insert kèm toạ độ (cộ
 - Non-admin → 403; chưa login → 401; thiếu name → 400.
 - Tạo có toạ độ → row có `location` (ST_X = lng, ST_Y = lat); tạo không toạ độ → location NULL.
 - Trả `{ id }` 201.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/da30797

@@ -16,3 +16,6 @@ Cả `POST` (tạo) và `PATCH` (sửa) đều cần validate toạ độ giốn
 ## Done khi
 - `optionalLatLng` export, dùng `ValidationError` sẵn có (không class mới).
 - `pnpm test` chạy file mới xanh, phủ: cả null, hợp lệ, thiếu một, ngoài range, NaN.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/25e4227

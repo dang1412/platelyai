@@ -13,3 +13,6 @@ về lat/lng.
 ## Done khi
 - `RestaurantForEdit` có lat/lng; build TS không lỗi.
 - `getRestaurantForEdit` trả lat/lng đúng cho quán đã có toạ độ.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/2cf9305

@@ -16,3 +16,6 @@ hành vi cũ).
 ## Done khi
 - PATCH có lat/lng → cập nhật location đúng; PATCH như cũ (form gửi lại toạ độ cũ) không đổi dữ liệu.
 - Validate/authz vẫn nguyên; lint/build xanh.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/d42d038

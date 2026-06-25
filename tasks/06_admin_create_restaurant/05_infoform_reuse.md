@@ -26,3 +26,6 @@ Mục tiêu chính: dùng lại form thông tin quán cho cả tạo và sửa, 
 - `InfoForm mode="edit"` hoạt động như cũ + lưu được toạ độ.
 - Nút Geolocation điền lat/lng; báo lỗi khi bị từ chối.
 - Build/lint xanh.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/91e244e
