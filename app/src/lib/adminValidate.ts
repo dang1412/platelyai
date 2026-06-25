@@ -55,6 +55,26 @@ export function optionalOrder(v: unknown): number {
   return n;
 }
 
+// Rating: số trong [0, 5] (làm tròn 1 chữ số thập phân, khớp cột NUMERIC(2,1)) hoặc null.
+export function optionalRating(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "string" ? Number(v) : (v as number);
+  if (!Number.isFinite(n) || n < 0 || n > 5) {
+    throw new ValidationError("Điểm đánh giá phải trong khoảng [0, 5]");
+  }
+  return Math.round(n * 10) / 10;
+}
+
+// rating_count: số nguyên ≥ 0 hoặc null.
+export function optionalCount(v: unknown): number | null {
+  if (v == null || v === "") return null;
+  const n = typeof v === "string" ? Number(v) : (v as number);
+  if (!Number.isInteger(n) || n < 0) {
+    throw new ValidationError("Số lượt đánh giá phải là số nguyên ≥ 0");
+  }
+  return n;
+}
+
 export function optionalBool(v: unknown, fallback: boolean): boolean {
   if (typeof v === "boolean") return v;
   return fallback;
