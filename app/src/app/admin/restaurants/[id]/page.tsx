@@ -6,6 +6,7 @@ import InfoForm from "@/components/admin/InfoForm";
 import MenuEditor from "@/components/admin/MenuEditor";
 import MenuImport from "@/components/admin/MenuImport";
 import OwnerForm from "@/components/admin/OwnerForm";
+import RatingForm from "@/components/admin/RatingForm";
 
 // Trang sửa một quán: thông tin + menu (+ gán owner nếu admin). Quyền theo từng quán.
 export default async function RestaurantEditPage({
@@ -48,6 +49,20 @@ export default async function RestaurantEditPage({
         <h2 className="mb-3 text-lg font-semibold">Thông tin quán</h2>
         <InfoForm mode="edit" restaurant={data} />
       </section>
+
+      {user.role === "admin" && (
+        <section>
+          <h2 className="mb-1 text-lg font-semibold">Đánh giá</h2>
+          <p className="mb-3 text-sm text-black/60">
+            Điểm và số lượt đánh giá ảnh hưởng xếp hạng kết quả tìm kiếm.
+          </p>
+          <RatingForm
+            restaurantId={data.id}
+            rating={data.rating}
+            ratingCount={data.ratingCount}
+          />
+        </section>
+      )}
 
       {user.role === "admin" && (
         <section>
