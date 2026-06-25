@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser, canEdit } from "@/lib/authz";
 import { getRestaurantForEdit } from "@/lib/adminRestaurant";
+import { loadAllTags } from "@/lib/tags";
 import InfoForm from "@/components/admin/InfoForm";
 import MenuEditor from "@/components/admin/MenuEditor";
 import MenuImport from "@/components/admin/MenuImport";
 import OwnerForm from "@/components/admin/OwnerForm";
 import RatingForm from "@/components/admin/RatingForm";
+import TagEditor from "@/components/admin/TagEditor";
 
 // Trang sửa một quán: thông tin + menu (+ gán owner nếu admin). Quyền theo từng quán.
 export default async function RestaurantEditPage({
@@ -36,6 +38,8 @@ export default async function RestaurantEditPage({
   const data = await getRestaurantForEdit(restaurantId);
   if (!data) notFound();
 
+  const allTags = await loadAllTags();
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-6">
       <div>
@@ -48,6 +52,15 @@ export default async function RestaurantEditPage({
       <section>
         <h2 className="mb-3 text-lg font-semibold">Thông tin quán</h2>
         <InfoForm mode="edit" restaurant={data} />
+      </section>
+
+      <section>
+        <h2 className="mb-1 text-lg font-semibold">Tag</h2>
+        <p className="mb-3 text-sm text-black/60">
+          Đặc điểm/không khí quán (vd cà phê, view đẹp). Tag khớp với truy vấn giúp quán
+          xếp hạng cao hơn trong tìm kiếm.
+        </p>
+        <TagEditor restaurantId={data.id} tags={data.tags} allTags={allTags} />
       </section>
 
       {user.role === "admin" && (

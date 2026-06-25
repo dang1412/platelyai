@@ -23,3 +23,12 @@ export async function loadTagVocab(): Promise<string[]> {
 export function _resetTagVocabCache(): void {
   cache = null;
 }
+
+// Toàn bộ tag (id + name) cho UI gán tag ở admin. KHÔNG cache: admin cần thấy tag mới ngay
+// và lượng tag nhỏ. Khác loadTagVocab (chỉ name, có cache, phục vụ extract).
+export async function loadAllTags(): Promise<{ id: number; name: string }[]> {
+  const rows = await query<{ id: number | string; name: string }>(
+    `SELECT id, name FROM tags WHERE name IS NOT NULL ORDER BY name`,
+  );
+  return rows.map((r) => ({ id: Number(r.id), name: r.name }));
+}

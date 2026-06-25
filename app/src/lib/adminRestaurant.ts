@@ -34,6 +34,7 @@ export type RestaurantForEdit = {
   lng: number | null;
   rating: string | null; // NUMERIC → pg trả string
   ratingCount: number | null;
+  tags: { id: number; name: string }[]; // tag vibe đã gán cho quán
   categories: EditCategory[];
 };
 
@@ -69,6 +70,14 @@ export async function getRestaurantForEdit(
        FROM menu_items
       WHERE restaurant_id = $1
       ORDER BY id ASC`,
+    [restaurantId],
+  );
+
+  const tagRows = await query<{ id: number | string; name: string }>(
+    `SELECT t.id, t.name
+       FROM restaurant_tags rt JOIN tags t ON t.id = rt.tag_id
+      WHERE rt.restaurant_id = $1
+      ORDER BY t.name ASC`,
     [restaurantId],
   );
 
@@ -122,6 +131,7 @@ export async function getRestaurantForEdit(
     lng: r.lng != null ? Number(r.lng) : null,
     rating: (r.rating as string | null) ?? null,
     ratingCount: r.ratingCount != null ? Number(r.ratingCount) : null,
+    tags: tagRows.map((t) => ({ id: Number(t.id), name: t.name })),
     categories,
   };
 }
