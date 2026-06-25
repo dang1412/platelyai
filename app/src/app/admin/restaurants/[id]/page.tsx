@@ -4,6 +4,7 @@ import { getCurrentUser, canEdit } from "@/lib/authz";
 import { getRestaurantForEdit } from "@/lib/adminRestaurant";
 import InfoForm from "@/components/admin/InfoForm";
 import MenuEditor from "@/components/admin/MenuEditor";
+import MenuImport from "@/components/admin/MenuImport";
 import OwnerForm from "@/components/admin/OwnerForm";
 
 // Trang sửa một quán: thông tin + menu (+ gán owner nếu admin). Quyền theo từng quán.
@@ -58,8 +59,9 @@ export default async function RestaurantEditPage({
         </section>
       )}
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Menu</h2>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Menu</h2>
+        <MenuImport restaurantId={data.id} />
         <MenuEditor restaurantId={data.id} categories={data.categories} />
       </section>
     </main>

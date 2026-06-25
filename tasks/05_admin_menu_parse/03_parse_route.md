@@ -17,3 +17,6 @@ Mẫu cấu trúc: các route trong `…/restaurants/[id]/items/route.ts`.
 
 ## Done khi
 - Upload thử trả JSON đúng cấu trúc `ParsedMenu`; mime/size sai → 400; không quyền → 401/403.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/43a4415f20882baf5db3840fcc8ca76816282a8e

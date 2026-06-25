@@ -10,3 +10,6 @@
 
 ## Done khi
 - CI/local xanh, PR mở.
+
+## Commit / PR
+PR: https://github.com/dang1412/platelyai/pull/9
