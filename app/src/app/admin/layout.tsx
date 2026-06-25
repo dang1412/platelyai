@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 
 // Guard cho toàn bộ /admin. Chạy ở Node runtime (server component) nên dùng pg được.
-// Chưa đăng nhập -> /login. Đăng nhập nhưng không phải admin -> báo thiếu quyền.
+// Chưa đăng nhập -> /login. Vào được nếu role ∈ {admin, owner}; user thường -> báo thiếu quyền.
+// Phân quyền theo TỪNG quán nằm ở lib/authz.ts (canEdit/assertCanEdit).
 export default async function AdminLayout({
   children,
 }: {
@@ -11,13 +12,14 @@ export default async function AdminLayout({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  if (session.user.role !== "admin") {
+  const role = session.user.role;
+  if (role !== "admin" && role !== "owner") {
     return (
       <main className="flex flex-1 items-center justify-center p-6 text-center">
         <div>
           <h1 className="mb-2 text-xl font-semibold">Không đủ quyền</h1>
           <p className="text-sm text-black/60">
-            Tài khoản {session.user.email} chưa được cấp quyền admin.
+            Tài khoản {session.user.email} chưa được cấp quyền quản trị.
           </p>
         </div>
       </main>
