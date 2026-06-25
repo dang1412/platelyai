@@ -30,6 +30,8 @@ export type RestaurantForEdit = {
   website: string | null;
   servesFood: boolean | null;
   servesDrink: boolean | null;
+  lat: number | null;
+  lng: number | null;
   categories: EditCategory[];
 };
 
@@ -37,7 +39,7 @@ export async function getRestaurantForEdit(
   restaurantId: number,
 ): Promise<RestaurantForEdit | null> {
   const rows = await query(
-    `SELECT id, name, address, phone, website,
+    `SELECT id, name, address, phone, website, lat, lng,
             serves_food  AS "servesFood",
             serves_drink AS "servesDrink"
        FROM restaurants WHERE id = $1 LIMIT 1`,
@@ -113,6 +115,8 @@ export async function getRestaurantForEdit(
     website: (r.website as string | null) ?? null,
     servesFood: (r.servesFood as boolean | null) ?? null,
     servesDrink: (r.servesDrink as boolean | null) ?? null,
+    lat: r.lat != null ? Number(r.lat) : null,
+    lng: r.lng != null ? Number(r.lng) : null,
     categories,
   };
 }
