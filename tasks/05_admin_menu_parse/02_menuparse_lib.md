@@ -28,3 +28,6 @@ Tham khảo SDK call: `src/lib/extract.ts` (`@google/genai` v2, `ai.models.gener
 
 ## Done khi
 - `pnpm test` xanh; `parseMenuImages` type khớp cách dùng ở task 03.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/c2f045ff757ee9cf114ef4a15851402eab3f725e

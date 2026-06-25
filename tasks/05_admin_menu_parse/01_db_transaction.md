@@ -17,3 +17,6 @@ dòng trong 1 transaction (task 04).
 ## Done khi
 - `pnpm lint` xanh, type khớp với cách dùng dự kiến ở task 04.
 - Không tạo `Pool` mới — tái dùng `pool` đã export (AGENTS §3).
+
+## Commit
+https://github.com/dang1412/platelyai/commit/46279f504f3a6822e8ba1acc29ff43c3818f3498

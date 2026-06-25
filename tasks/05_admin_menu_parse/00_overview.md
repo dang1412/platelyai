@@ -3,9 +3,9 @@
 Chia nhỏ từ `plans/05_admin_menu_parse.md`. Làm tuần tự, tick khi xong.
 Branch: `feat/admin-menu-parse`.
 
-- [ ] `01_db_transaction.md` — thêm `withTransaction` vào `src/lib/db.ts`
-- [ ] `02_menuparse_lib.md` — `src/lib/menuParse.ts` (prompt Vision + normalize) + test
-- [ ] `03_parse_route.md` — `POST .../menu/parse` (upload ảnh → JSON preview)
+- [x] `01_db_transaction.md` — thêm `withTransaction` vào `src/lib/db.ts`
+- [x] `02_menuparse_lib.md` — `src/lib/menuParse.ts` (prompt Vision + normalize) + test
+- [x] `03_parse_route.md` — `POST .../menu/parse` (upload ảnh → JSON preview)
 - [ ] `04_import_route.md` — `POST .../menu/import` (merge/upsert trong transaction) + test
 - [ ] `05_ui_menu_import.md` — `MenuImport.tsx` + gắn vào page + adminFetch FormData
 - [ ] `06_finalize.md` — lint/test/build + PR
