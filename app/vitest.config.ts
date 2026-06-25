@@ -6,5 +6,5 @@ export default defineConfig({
     // Khớp alias "@/..." trong tsconfig để test import giống app.
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
-  test: { environment: "node" },
+  test: { environment: "node", setupFiles: ["./vitest.setup.ts"] },
 });
