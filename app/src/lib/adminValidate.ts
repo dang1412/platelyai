@@ -60,6 +60,28 @@ export function optionalBool(v: unknown, fallback: boolean): boolean {
   return fallback;
 }
 
+// Toạ độ: lat/lng phải đi cùng nhau (cả hai hoặc cả hai null). Dùng chung cho POST/PATCH quán.
+export function optionalLatLng(
+  latRaw: unknown,
+  lngRaw: unknown,
+): { lat: number | null; lng: number | null } {
+  const hasLat = latRaw != null && latRaw !== "";
+  const hasLng = lngRaw != null && lngRaw !== "";
+  if (!hasLat && !hasLng) return { lat: null, lng: null };
+  if (hasLat !== hasLng) {
+    throw new ValidationError("Cần cả lat và lng");
+  }
+  const lat = typeof latRaw === "string" ? Number(latRaw) : (latRaw as number);
+  const lng = typeof lngRaw === "string" ? Number(lngRaw) : (lngRaw as number);
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    throw new ValidationError("lat phải trong khoảng [-90, 90]");
+  }
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    throw new ValidationError("lng phải trong khoảng [-180, 180]");
+  }
+  return { lat, lng };
+}
+
 // Đổi ValidationError thành Response 400; null nếu không phải lỗi validate.
 export function validationResponse(err: unknown): Response | null {
   if (err instanceof ValidationError) {
