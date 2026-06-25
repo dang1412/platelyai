@@ -19,3 +19,6 @@
 ## Done khi
 - Upload ảnh → thấy preview → sửa → lưu → menu mới/đã cập nhật hiện trong `MenuEditor`.
 - Light + dark đều ổn; `pnpm lint` xanh.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/6c0cc7a

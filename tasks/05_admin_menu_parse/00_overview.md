@@ -6,9 +6,9 @@ Branch: `feat/admin-menu-parse`.
 - [x] `01_db_transaction.md` — thêm `withTransaction` vào `src/lib/db.ts`
 - [x] `02_menuparse_lib.md` — `src/lib/menuParse.ts` (prompt Vision + normalize) + test
 - [x] `03_parse_route.md` — `POST .../menu/parse` (upload ảnh → JSON preview)
-- [ ] `04_import_route.md` — `POST .../menu/import` (merge/upsert trong transaction) + test
-- [ ] `05_ui_menu_import.md` — `MenuImport.tsx` + gắn vào page + adminFetch FormData
-- [ ] `06_finalize.md` — lint/test/build + PR
+- [x] `04_import_route.md` — `POST .../menu/import` (merge/upsert trong transaction) + test
+- [x] `05_ui_menu_import.md` — `MenuImport.tsx` + gắn vào page + adminFetch FormData
+- [x] `06_finalize.md` — lint/test/build + PR (#9)
 
 Quy ước MUST (AGENTS): validate-at-the-edge trước khi chạm DB/AI, SQL tham số hoá `$1,$2…`,
 không raw hex/`bg-zinc-*` trong JSX, không gọi Gemini trong vòng lặp render.

@@ -32,3 +32,6 @@ File mới: `src/app/api/admin/restaurants/[id]/menu/import/route.ts`. Phụ thu
 
 ## Done khi
 - Các ca test trên xanh.
+
+## Commit
+https://github.com/dang1412/platelyai/commit/ba6db79bdcd32f679452915a0517a14a3ea3379c
