@@ -50,6 +50,9 @@ export default function InfoForm({ mode, restaurant }: Props) {
         );
         setLocating(false);
       },
+      // Đồng bộ option với useGeolocation (search): cùng thiết bị → cùng toạ độ. Bật GPS độ
+      // chính xác cao để toạ độ quán khớp origin lúc search, tránh lệch rớt khỏi bán kính lọc.
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5 * 60_000 },
     );
   }
 
