@@ -46,7 +46,7 @@ export default async function RestaurantEditPage({
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Thông tin quán</h2>
-        <InfoForm restaurant={data} />
+        <InfoForm mode="edit" restaurant={data} />
       </section>
 
       {user.role === "admin" && (

@@ -75,7 +75,7 @@ export default function RestaurantModal({
   if (restaurantId == null) return null;
 
   const r = detail?.restaurant;
-  const gmap = r ? mapUrl(r.googlePlaceId, r.name) : null;
+  const gmap = r ? mapUrl(r.googlePlaceId, r.name, r.lat, r.lng) : null;
   const distanceKm = distanceM != null ? (distanceM / 1000).toFixed(1) : null;
 
   return (
