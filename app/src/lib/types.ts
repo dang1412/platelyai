@@ -3,9 +3,6 @@
 // Toạ độ điểm gốc (origin) để lọc/rank theo khoảng cách.
 export type LatLng = { lat: number; lng: number };
 
-// Yếu tố 1 — loại hình quán user muốn (null = không xác định).
-export type FoodCategory = "food" | "drink";
-
 // Một menu_item khớp với một tên món user hỏi (xem lib/dishes.ts). Tầng rank/route gom theo
 // restaurantId. `dist` = cosine distance (0 = khớp tuyệt đối, lexical name = 0); `queryDish` giữ
 // lại tên gốc đã hỏi để đếm độ phủ (coverage) ở bước rank.
