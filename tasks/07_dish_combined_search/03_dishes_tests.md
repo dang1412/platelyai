@@ -30,6 +30,10 @@ khoá lại 3 tier dist mới + verify thật cột/trigger/index trên Postgres
   đổi → `resolveDishes(["phở gà tái"])` khớp, `["phở bò tái"]` không còn phraseto-khớp.
 - EXPLAIN: gate plainto dùng `menu_items_search_vec_idx` (Bitmap Index Scan).
 
+## Commit
+
+`a3af50c` — test(search): cập nhật unit 3 tier + integration search_vec/trigger (DB thật)
+
 ## Done khi
 
 - `pnpm test` xanh (unit + integration).
