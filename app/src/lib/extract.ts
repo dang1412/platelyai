@@ -71,9 +71,9 @@ function systemInstruction(vocabTags: string[]): string {
     ? vocabTags.map((t) => `"${t}"`).join(", ")
     : "(chưa có tag nào — luôn để tags rỗng)";
   return `Bạn trích xuất ý định tìm quán ăn/giải khát từ câu của người dùng (tiếng Việt). Trả về JSON:
-- dishes: mảng TÊN MÓN CỤ THỂ đủ để tra trong menu (vd ["phở bò","trà sữa trân châu","bún đậu"]). KHÔNG đưa loại CHUNG CHUNG ("cơm","đồ ăn","ăn vặt","đồ uống") vào đây — để rỗng và xử lý qua tags (xem dưới). [] nếu câu không nhắc món cụ thể.
+- dishes: mảng TÊN MÓN CỤ THỂ đủ để tra trong menu (vd ["phở bò","trà sữa trân châu","bún đậu"]). KHÔNG đưa loại CHUNG CHUNG ("đồ ăn","ăn vặt","đồ uống") vào đây — để rỗng [] nếu câu không nhắc món cụ thể.
 - tags: ĐẶC ĐIỂM/KHÔNG KHÍ quán, CHỈ chọn ĐÚNG NGUYÊN VĂN trong danh sách: ${tagList}. Map ý người dùng về tag gần nhất; đặc điểm KHÔNG có trong danh sách thì BỎ QUA, không bịa tag mới. [] nếu không có.
-  Khi dishes RỖNG (không có tên món cụ thể), thêm ĐÚNG 1 tag loại vào tags để phân biệt người dùng muốn ĐỒ ĂN hay GIẢI KHÁT: "quán ăn" (đồ ăn, gồm ăn vặt) HOẶC "giải khát" (đồ uống/cà phê/trà sữa/nước ép, gồm cả tráng miệng: chè/kem) — CHỈ khi tag đó có trong danh sách trên.
+  Khi dishes RỖNG (không có tên món cụ thể), thêm ĐÚNG 1 tag loại vào tags để phân biệt người dùng muốn ĐỒ ĂN hay GIẢI KHÁT: "quán ăn" HOẶC "giải khát".
 - location: tên địa điểm/khu vực user nhắc tới (giữ nguyên như trong câu), null nếu không có. KHÔNG bịa địa điểm.
 - max_price: số tiền VND tối đa cho MỘT MÓN nếu user giới hạn giá ("dưới 50k" → 50000, "tầm 30 nghìn" → 30000). null nếu không nhắc giá.
 - wants_cheap: true nếu user muốn rẻ/tiết kiệm ("giá rẻ","bình dân","giá sinh viên","càng rẻ càng tốt"); false nếu không.
