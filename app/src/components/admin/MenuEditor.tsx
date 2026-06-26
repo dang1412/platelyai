@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { EditCategory, MenuKind } from "@/lib/adminRestaurant";
+import type { EditCategory } from "@/lib/adminRestaurant";
 import { adminFetch } from "./adminFetch";
 import CategoryBlock from "./CategoryBlock";
 
@@ -20,7 +20,6 @@ export default function MenuEditor({
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<"" | MenuKind>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,11 +30,9 @@ export default function MenuEditor({
     try {
       await adminFetch(`/api/admin/restaurants/${restaurantId}/categories`, "POST", {
         category_name: name,
-        kind: kind || null,
         display_order: categories.length,
       });
       setName("");
-      setKind("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lỗi");
@@ -64,16 +61,6 @@ export default function MenuEditor({
           placeholder="Tên nhóm mới (vd: Đồ uống)…"
           required
         />
-        <select
-          className={field}
-          value={kind}
-          onChange={(e) => setKind(e.target.value as "" | MenuKind)}
-        >
-          <option value="">Loại —</option>
-          <option value="food">Đồ ăn</option>
-          <option value="drink">Đồ uống</option>
-          <option value="other">Khác</option>
-        </select>
         <button
           type="submit"
           disabled={busy}

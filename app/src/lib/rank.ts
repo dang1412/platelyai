@@ -31,7 +31,7 @@ export type Candidate = {
   summary: RestaurantSummary; // base fields (kèm distanceM/matchedDishes nếu có)
   coverage?: number; // 0..1: số tên-món-hỏi phủ được / tổng (nhánh MÓN)
   matchQuality?: number; // 0..1: chất lượng khớp ngữ nghĩa món (1 - minDist/threshold)
-  cheapness?: number; // 0..1: quán càng rẻ càng cao (từ món rẻ nhất đúng kind); chỉ ca wantsCheap
+  cheapness?: number; // 0..1: quán càng rẻ càng cao (từ món rẻ nhất khớp); chỉ ca wantsCheap
 };
 
 // queryTags: tag vocab trích từ query — cộng điểm theo tỉ lệ trùng tag quán. Rỗng → không tác động.

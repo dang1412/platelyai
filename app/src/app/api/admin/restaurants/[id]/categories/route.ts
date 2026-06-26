@@ -3,7 +3,6 @@ import { requireCanEdit, authzResponse } from "@/lib/authz";
 import {
   requireIntId,
   requireText,
-  optionalKind,
   optionalOrder,
   validationResponse,
 } from "@/lib/adminValidate";
@@ -22,14 +21,13 @@ export async function POST(
 
     const body = await request.json().catch(() => ({}));
     const categoryName = requireText(body.category_name, "Tên nhóm");
-    const kind = optionalKind(body.kind);
     const displayOrder = optionalOrder(body.display_order);
 
     const rows = await query<{ id: string }>(
-      `INSERT INTO menu_categories (restaurant_id, category_name, kind, display_order)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO menu_categories (restaurant_id, category_name, display_order)
+       VALUES ($1, $2, $3)
        RETURNING id`,
-      [restaurantId, categoryName, kind, displayOrder],
+      [restaurantId, categoryName, displayOrder],
     );
 
     return Response.json({ id: Number(rows[0].id) }, { status: 201 });

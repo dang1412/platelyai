@@ -1,9 +1,7 @@
 import { query } from "@/lib/db";
 
 // Tải chi tiết quán + menu cho trang sửa (/admin/restaurants/[id]). Khác API public
-// (api/restaurants/[id]) ở chỗ trả kèm id category/món + kind/display_order/is_available để edit.
-
-export type MenuKind = "food" | "drink" | "other";
+// (api/restaurants/[id]) ở chỗ trả kèm id category/món + display_order/is_available để edit.
 
 export type EditItem = {
   id: number;
@@ -17,7 +15,6 @@ export type EditItem = {
 export type EditCategory = {
   id: number; // 0 = nhóm "chưa phân loại" (món có category_id NULL)
   categoryName: string;
-  kind: MenuKind | null;
   displayOrder: number;
   items: EditItem[];
 };
@@ -51,7 +48,6 @@ export async function getRestaurantForEdit(
   const catRows = await query(
     `SELECT id,
             category_name AS "categoryName",
-            kind,
             display_order AS "displayOrder"
        FROM menu_categories
       WHERE restaurant_id = $1
@@ -81,7 +77,6 @@ export async function getRestaurantForEdit(
   const categories: EditCategory[] = catRows.map((c) => ({
     id: Number(c.id),
     categoryName: c.categoryName as string,
-    kind: (c.kind as MenuKind | null) ?? null,
     displayOrder: Number(c.displayOrder ?? 0),
     items: [],
   }));
@@ -105,7 +100,6 @@ export async function getRestaurantForEdit(
         uncategorized = {
           id: 0,
           categoryName: "Chưa phân loại",
-          kind: null,
           displayOrder: 9999,
           items: [],
         };

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { normalizeParsedMenu } from "./menuParse";
 
 describe("normalizeParsedMenu", () => {
-  it("parse cấu trúc đầy đủ, suy kind theo tên nhóm", () => {
+  it("parse cấu trúc đầy đủ", () => {
     const out = normalizeParsedMenu({
       categories: [
         {
@@ -18,10 +18,8 @@ describe("normalizeParsedMenu", () => {
     expect(out.categories).toHaveLength(2);
     expect(out.categories[0]).toEqual({
       categoryName: "Món chính",
-      kind: "food",
       items: [{ name: "Phở bò", price: 45000, description: "Tái nạm" }],
     });
-    expect(out.categories[1].kind).toBe("drink");
     expect(out.categories[1].items[0]).toEqual({
       name: "Cà phê sữa",
       price: 25000,
