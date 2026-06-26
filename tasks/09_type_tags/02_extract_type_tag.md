@@ -1,5 +1,7 @@
 # 02 — Extract: bỏ `category`, gắn type-tag khi không có món
 
+> Commit: `226de55` — feat(search): bỏ field category, extract gắn type-tag ✅
+
 ## Vì sao
 Trục food/drink chuyển sang tag. Extract không cần field `category` nữa; thay vào đó khi không
 trích được tên món cụ thể thì gắn 1 type-tag để rank vẫn phân biệt được ăn/uống.
