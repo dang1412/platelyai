@@ -35,6 +35,10 @@ Tạo **`app/src/lib/extractCache.test.ts`** (unit thuần, `_resetExtractCache(
   cùng promise/kết quả.
 - `buildKey`: chuẩn hoá hoa/thường + khoảng trắng cho ra cùng key; vocab khác → key khác.
 
+## Commit
+
+`5667f4f` — feat(search): extractCache — LRU + TTL + single-flight (in-memory)
+
 ## Done khi
 
 - `extractCache.ts` export `getOrCompute`, `buildKey`, `_resetExtractCache`, `CACHE_MAX`, `CACHE_TTL_MS`.
