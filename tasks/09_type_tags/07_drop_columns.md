@@ -1,5 +1,7 @@
 # 07 — DB phase 2: DROP cột food/drink
 
+> Commit: `50bfcc6` — feat(db): DROP serves_food/serves_drink + menu_categories.kind ✅ (đã apply DB dev)
+
 ## Vì sao
 Sau khi code (task 02–06) đã ngừng đọc/ghi `serves_*`/`kind`, dọn cột chết. Tách riêng bước này
 theo AGENTS §4 (DROP qua 2 bước) — chỉ chạy khi code mới đã chạy ổn.
