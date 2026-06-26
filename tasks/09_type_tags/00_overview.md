@@ -13,7 +13,7 @@ Xoá trục cứng food/drink (`serves_food`/`serves_drink`, `menu_categories.ki
 ## Checklist (theo thứ tự phụ thuộc)
 - [x] [01_db_type_tags.md](01_db_type_tags.md) — INSERT 4 tag + backfill restaurant_tags
 - [x] [02_extract_type_tag.md](02_extract_type_tag.md) — bỏ `category`, prompt gắn type-tag
-- [ ] [03_search_drop_kind.md](03_search_drop_kind.md) — candidates.ts + dishes.ts bỏ category/kind
+- [x] [03_search_drop_kind.md](03_search_drop_kind.md) — candidates.ts + dishes.ts bỏ category/kind
 - [ ] [04_ui_badge.md](04_ui_badge.md) — page.tsx bỏ badge category
 - [ ] [05_admin_serves.md](05_admin_serves.md) — gỡ serves_food/serves_drink khỏi admin
 - [ ] [06_admin_kind.md](06_admin_kind.md) — gỡ kind khỏi parse/import/validate/UI

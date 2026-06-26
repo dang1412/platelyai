@@ -1,5 +1,7 @@
 # 03 — Search core: bỏ category/kind khỏi candidates + dishes
 
+> Commit: `f36b325` — feat(search): bỏ lọc cứng food/drink ở candidates + dishes ✅
+
 ## Vì sao
 Sau khi extract bỏ `category`, các bước lọc theo `serves_*`/`mc.kind` ở tầng candidate không còn
 nguồn và không còn cần (food/drink giờ là rank mềm qua tag).
