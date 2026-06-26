@@ -19,8 +19,6 @@ export default function InfoForm({ mode, restaurant }: Props) {
   const [address, setAddress] = useState(restaurant?.address ?? "");
   const [phone, setPhone] = useState(restaurant?.phone ?? "");
   const [website, setWebsite] = useState(restaurant?.website ?? "");
-  const [servesFood, setServesFood] = useState(restaurant?.servesFood ?? false);
-  const [servesDrink, setServesDrink] = useState(restaurant?.servesDrink ?? false);
   const [lat, setLat] = useState(restaurant?.lat != null ? String(restaurant.lat) : "");
   const [lng, setLng] = useState(restaurant?.lng != null ? String(restaurant.lng) : "");
 
@@ -66,8 +64,6 @@ export default function InfoForm({ mode, restaurant }: Props) {
       address,
       phone,
       website,
-      serves_food: servesFood,
-      serves_drink: servesDrink,
       lat: lat.trim() === "" ? null : Number(lat),
       lng: lng.trim() === "" ? null : Number(lng),
     };
@@ -132,25 +128,6 @@ export default function InfoForm({ mode, restaurant }: Props) {
         >
           {locating ? "Đang lấy vị trí…" : "📍 Lấy toạ độ từ thiết bị"}
         </button>
-      </div>
-
-      <div className="flex gap-6 text-sm">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={servesFood}
-            onChange={(e) => setServesFood(e.target.checked)}
-          />
-          Phục vụ đồ ăn
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={servesDrink}
-            onChange={(e) => setServesDrink(e.target.checked)}
-          />
-          Phục vụ đồ uống
-        </label>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

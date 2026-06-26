@@ -1,5 +1,4 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { MenuKind } from "./adminRestaurant";
 
 // Đọc ảnh menu bằng Gemini Vision → cấu trúc categories[].items[] để admin xem/sửa trước
 // khi import vào DB (xem plans/05_admin_menu_parse.md). Prompt tham khảo code cũ
@@ -14,7 +13,6 @@ export type ParsedItem = {
 };
 export type ParsedCategory = {
   categoryName: string;
-  kind: MenuKind | null;
   items: ParsedItem[];
 };
 export type ParsedMenu = { categories: ParsedCategory[] };
@@ -30,13 +28,6 @@ type RawMenu = {
     }[];
   }[];
 };
-
-// Gợi ý drink theo tên nhóm (suy kind thô; admin sửa lại nếu sai).
-const DRINK_RE = /đồ uống|thức uống|cà phê|cafe|trà|nước|sinh tố|bia|rượu|cocktail|giải khát/i;
-
-function inferKind(categoryName: string): MenuKind {
-  return DRINK_RE.test(categoryName) ? "drink" : "food";
-}
 
 // Giá → integer ≥ 0 hoặc null (chấp số hoặc chuỗi số; bỏ ký tự không phải số).
 function normalizePrice(v: unknown): number | null {
@@ -79,7 +70,7 @@ export function normalizeParsedMenu(raw: unknown): ParsedMenu {
     }
     if (items.length === 0) continue;
 
-    categories.push({ categoryName, kind: inferKind(categoryName), items });
+    categories.push({ categoryName, items });
   }
   return { categories };
 }

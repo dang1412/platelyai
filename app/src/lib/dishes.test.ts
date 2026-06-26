@@ -88,18 +88,18 @@ describe("resolveDishes", () => {
     expect(lexSql).not.toContain("category_name"); // không còn match tên category
   });
 
-  it("maxPrice + category → đẩy filter vào SQL params + lọc kind (lexical)", async () => {
+  it("maxPrice → đẩy price filter vào SQL params (lexical)", async () => {
     route([], []);
-    await resolveDishes(["phở"], 50000, "food");
+    await resolveDishes(["phở"], 50000);
     const [lexSql, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
-    expect(lexSql).toContain("WHERE kind =");
-    expect(lexParams).toContain("food");
+    expect(lexSql).toContain("mi.price <=");
+    expect(lexSql).not.toContain("kind"); // food/drink không còn lọc kind (plan 09)
     expect(lexParams).toContain(50000);
   });
 
   it("wantsCheap → cap mỗi quán chèn price ASC (giữ món khớp rẻ nhất)", async () => {
     route([], []);
-    await resolveDishes(["phở"], null, null, null, true);
+    await resolveDishes(["phở"], null, null, true);
     const [lexSql] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
     expect(lexSql).toContain("u.price ASC NULLS LAST");
   });
@@ -113,7 +113,7 @@ describe("resolveDishes", () => {
 
   it("có origin → lexical lọc cứng bán kính (ST_DWithin) + ORDER theo gần", async () => {
     route([], []);
-    await resolveDishes(["phở"], null, null, { lat: 10, lng: 106 });
+    await resolveDishes(["phở"], null, { lat: 10, lng: 106 });
 
     const [lexSql, lexParams] = queryMock.mock.calls.find((c) => !isKnn(c[0]))!;
     expect(lexSql).toContain("ST_DWithin"); // lọc cứng

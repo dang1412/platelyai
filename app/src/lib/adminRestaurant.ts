@@ -1,9 +1,7 @@
 import { query } from "@/lib/db";
 
 // Tải chi tiết quán + menu cho trang sửa (/admin/restaurants/[id]). Khác API public
-// (api/restaurants/[id]) ở chỗ trả kèm id category/món + kind/display_order/is_available để edit.
-
-export type MenuKind = "food" | "drink" | "other";
+// (api/restaurants/[id]) ở chỗ trả kèm id category/món + display_order/is_available để edit.
 
 export type EditItem = {
   id: number;
@@ -17,7 +15,6 @@ export type EditItem = {
 export type EditCategory = {
   id: number; // 0 = nhóm "chưa phân loại" (món có category_id NULL)
   categoryName: string;
-  kind: MenuKind | null;
   displayOrder: number;
   items: EditItem[];
 };
@@ -28,8 +25,6 @@ export type RestaurantForEdit = {
   address: string | null;
   phone: string | null;
   website: string | null;
-  servesFood: boolean | null;
-  servesDrink: boolean | null;
   lat: number | null;
   lng: number | null;
   rating: string | null; // NUMERIC → pg trả string
@@ -43,8 +38,6 @@ export async function getRestaurantForEdit(
 ): Promise<RestaurantForEdit | null> {
   const rows = await query(
     `SELECT id, name, address, phone, website, lat, lng, rating,
-            serves_food  AS "servesFood",
-            serves_drink AS "servesDrink",
             rating_count AS "ratingCount"
        FROM restaurants WHERE id = $1 LIMIT 1`,
     [restaurantId],
@@ -55,7 +48,6 @@ export async function getRestaurantForEdit(
   const catRows = await query(
     `SELECT id,
             category_name AS "categoryName",
-            kind,
             display_order AS "displayOrder"
        FROM menu_categories
       WHERE restaurant_id = $1
@@ -85,7 +77,6 @@ export async function getRestaurantForEdit(
   const categories: EditCategory[] = catRows.map((c) => ({
     id: Number(c.id),
     categoryName: c.categoryName as string,
-    kind: (c.kind as MenuKind | null) ?? null,
     displayOrder: Number(c.displayOrder ?? 0),
     items: [],
   }));
@@ -109,7 +100,6 @@ export async function getRestaurantForEdit(
         uncategorized = {
           id: 0,
           categoryName: "Chưa phân loại",
-          kind: null,
           displayOrder: 9999,
           items: [],
         };
@@ -125,8 +115,6 @@ export async function getRestaurantForEdit(
     address: (r.address as string | null) ?? null,
     phone: (r.phone as string | null) ?? null,
     website: (r.website as string | null) ?? null,
-    servesFood: (r.servesFood as boolean | null) ?? null,
-    servesDrink: (r.servesDrink as boolean | null) ?? null,
     lat: r.lat != null ? Number(r.lat) : null,
     lng: r.lng != null ? Number(r.lng) : null,
     rating: (r.rating as string | null) ?? null,

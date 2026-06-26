@@ -1,5 +1,3 @@
-import type { MenuKind } from "@/lib/adminRestaurant";
-
 // Helpers validate input cho API ghi của admin (validate-at-the-edge, plan 04 §API).
 // Trả về kiểu đã ép hoặc ném thông điệp lỗi để route trả 400.
 
@@ -38,13 +36,6 @@ export function optionalPrice(v: unknown): number | null {
     throw new ValidationError("Giá phải là số nguyên ≥ 0");
   }
   return n;
-}
-
-// kind ∈ {food,drink,other} hoặc null.
-export function optionalKind(v: unknown): MenuKind | null {
-  if (v == null || v === "") return null;
-  if (v === "food" || v === "drink" || v === "other") return v;
-  throw new ValidationError("kind phải là food | drink | other");
 }
 
 // display_order: số nguyên, mặc định 0.

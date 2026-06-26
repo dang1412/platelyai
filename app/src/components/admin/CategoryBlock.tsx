@@ -2,19 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { EditCategory, MenuKind } from "@/lib/adminRestaurant";
+import type { EditCategory } from "@/lib/adminRestaurant";
 import { adminFetch } from "./adminFetch";
 import ItemRow from "./ItemRow";
 
 const field =
   "rounded-lg border border-black/15 px-2.5 py-1.5 text-sm outline-none focus:border-black/40";
-
-const KINDS: { value: "" | MenuKind; label: string }[] = [
-  { value: "", label: "—" },
-  { value: "food", label: "Đồ ăn" },
-  { value: "drink", label: "Đồ uống" },
-  { value: "other", label: "Khác" },
-];
 
 // Một nhóm menu: sửa/xoá nhóm + danh sách món + thêm món. id=0 là nhóm ảo "chưa phân loại"
 // (món category_id NULL) — chỉ liệt kê, không sửa/thêm.
@@ -29,7 +22,6 @@ export default function CategoryBlock({
   const virtual = category.id === 0;
 
   const [name, setName] = useState(category.categoryName);
-  const [kind, setKind] = useState<"" | MenuKind>(category.kind ?? "");
   const [order, setOrder] = useState(category.displayOrder.toString());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +36,6 @@ export default function CategoryBlock({
     try {
       await adminFetch(`/api/admin/categories/${category.id}`, "PATCH", {
         category_name: name,
-        kind: kind || null,
         display_order: order === "" ? 0 : Number(order),
       });
       router.refresh();
@@ -100,13 +91,6 @@ export default function CategoryBlock({
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <select className={field} value={kind} onChange={(e) => setKind(e.target.value as "" | MenuKind)}>
-            {KINDS.map((k) => (
-              <option key={k.value} value={k.value}>
-                {k.label}
-              </option>
-            ))}
-          </select>
           <input
             className={`${field} w-20`}
             value={order}

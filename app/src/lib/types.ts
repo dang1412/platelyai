@@ -3,9 +3,6 @@
 // Toạ độ điểm gốc (origin) để lọc/rank theo khoảng cách.
 export type LatLng = { lat: number; lng: number };
 
-// Yếu tố 1 — loại hình quán user muốn (null = không xác định).
-export type FoodCategory = "food" | "drink";
-
 // Một menu_item khớp với một tên món user hỏi (xem lib/dishes.ts). Tầng rank/route gom theo
 // restaurantId. `dist` = cosine distance (0 = khớp tuyệt đối, lexical name = 0); `queryDish` giữ
 // lại tên gốc đã hỏi để đếm độ phủ (coverage) ở bước rank.
@@ -18,14 +15,14 @@ export type MatchedDish = {
   queryDish: string;
 };
 
-// Ý định tìm kiếm trích từ câu tự nhiên (xem lib/extract.ts). Đúng 6 yếu tố của plan 01.
+// Ý định tìm kiếm trích từ câu tự nhiên (xem lib/extract.ts). Trục food/drink KHÔNG còn là field
+// riêng (plan 09): khi dishes rỗng, extract gắn type-tag "quán ăn"/"giải khát" vào tags (rank mềm).
 export type ParsedQuery = {
-  category: FoodCategory | null; // 1 — lọc cứng
-  dishes: string[]; // 2 — lọc cứng (tên món cụ thể)
-  tags: string[]; // 3 — ranking (đã validate trong vocab bảng tags)
-  location: string | null; // 4 — lọc cứng (qua origin)
-  maxPrice: number | null; // 5 — lọc cứng (giá tối đa MỘT món, VND)
-  wantsCheap: boolean; // 6 — ranking (cộng trọng số quán có món rẻ)
+  dishes: string[]; // lọc cứng (tên món cụ thể)
+  tags: string[]; // ranking (đã validate trong vocab bảng tags; gồm cả type-tag ăn/uống)
+  location: string | null; // lọc cứng (qua origin)
+  maxPrice: number | null; // lọc cứng (giá tối đa MỘT món, VND)
+  wantsCheap: boolean; // ranking (cộng trọng số quán có món rẻ)
 };
 
 // Một quán trong kết quả /api/search (xem plan 01 §1). `rating` là string vì numeric của pg trả

@@ -1,18 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { buildKey, getOrCompute } from "./extractCache";
-import type { FoodCategory, ParsedQuery } from "./types";
+import type { ParsedQuery } from "./types";
 
-// Bước 1 — parse câu tự nhiên → ParsedQuery (6 yếu tố) bằng Gemini.
+// Bước 1 — parse câu tự nhiên → ParsedQuery bằng Gemini.
 // Vd: "phở bò ngon gần Vincom Bà Triệu dưới 50k"
-//   → { category:"food", dishes:["phở bò"], tags:[], location:"Vincom Bà Triệu",
-//       maxPrice:50000, wantsCheap:false }
-// Xem plans/01_1_extract.md.
+//   → { dishes:["phở bò"], tags:[], location:"Vincom Bà Triệu", maxPrice:50000, wantsCheap:false }
+// Trục food/drink KHÔNG còn field category (plan 09): khi KHÔNG có món cụ thể, Gemini gắn type-tag
+// "quán ăn"/"giải khát" vào tags. Xem plans/01_1_extract.md, plans/09_type_tags.md.
 
 const MODEL = "gemini-2.5-flash-lite";
 
 // JSON thô Gemini trả về (trước khi chuẩn hoá).
 type RawExtraction = {
-  category?: string | null;
   dishes?: string[];
   tags?: string[];
   location?: string | null;
@@ -22,18 +21,12 @@ type RawExtraction = {
 
 function fallback(): ParsedQuery {
   return {
-    category: null,
     dishes: [],
     tags: [],
     location: null,
     maxPrice: null,
     wantsCheap: false,
   };
-}
-
-function normalizeCategory(v: unknown): FoodCategory | null {
-  const s = typeof v === "string" ? v.toLowerCase().trim() : "";
-  return s === "food" || s === "drink" ? s : null;
 }
 
 function normalizeMaxPrice(v: unknown): number | null {
@@ -65,7 +58,6 @@ export function parseExtraction(
   );
 
   return {
-    category: normalizeCategory(raw.category),
     dishes,
     tags,
     location: raw.location?.trim() || null,
@@ -79,9 +71,9 @@ function systemInstruction(vocabTags: string[]): string {
     ? vocabTags.map((t) => `"${t}"`).join(", ")
     : "(chưa có tag nào — luôn để tags rỗng)";
   return `Bạn trích xuất ý định tìm quán ăn/giải khát từ câu của người dùng (tiếng Việt). Trả về JSON:
-- category: "food" nếu tìm ĐỒ ĂN (gồm cả ăn vặt: gà rán, bánh tráng trộn, xúc xích...); "drink" nếu tìm ĐỒ UỐNG/GIẢI KHÁT (cà phê, trà sữa, nước ép) HOẶC TRÁNG MIỆNG (chè, kem, sữa chua); null nếu không rõ.
-- dishes: mảng TÊN MÓN CỤ THỂ đủ để tra trong menu (vd ["phở bò","trà sữa trân châu","bún đậu"]). KHÔNG đưa loại CHUNG CHUNG ("cơm","đồ ăn","ăn vặt","đồ uống") vào đây — để rỗng và chỉ set category. [] nếu câu không nhắc món cụ thể.
+- dishes: mảng TÊN MÓN CỤ THỂ đủ để tra trong menu (vd ["phở bò","trà sữa trân châu","bún đậu"]). KHÔNG đưa loại CHUNG CHUNG ("đồ ăn","ăn vặt","đồ uống") vào đây — để rỗng [] nếu câu không nhắc món cụ thể.
 - tags: ĐẶC ĐIỂM/KHÔNG KHÍ quán, CHỈ chọn ĐÚNG NGUYÊN VĂN trong danh sách: ${tagList}. Map ý người dùng về tag gần nhất; đặc điểm KHÔNG có trong danh sách thì BỎ QUA, không bịa tag mới. [] nếu không có.
+  Khi dishes RỖNG (không có tên món cụ thể), thêm ĐÚNG 1 tag loại vào tags để phân biệt người dùng muốn ĐỒ ĂN hay GIẢI KHÁT: "quán ăn" HOẶC "giải khát".
 - location: tên địa điểm/khu vực user nhắc tới (giữ nguyên như trong câu), null nếu không có. KHÔNG bịa địa điểm.
 - max_price: số tiền VND tối đa cho MỘT MÓN nếu user giới hạn giá ("dưới 50k" → 50000, "tầm 30 nghìn" → 30000). null nếu không nhắc giá.
 - wants_cheap: true nếu user muốn rẻ/tiết kiệm ("giá rẻ","bình dân","giá sinh viên","càng rẻ càng tốt"); false nếu không.
@@ -114,7 +106,6 @@ export async function extractQuery(
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              category: { type: Type.STRING, nullable: true },
               dishes: { type: Type.ARRAY, items: { type: Type.STRING } },
               tags: { type: Type.ARRAY, items: { type: Type.STRING } },
               location: { type: Type.STRING, nullable: true },

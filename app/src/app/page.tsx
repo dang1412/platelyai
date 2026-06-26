@@ -136,14 +136,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* Ý định AI trích xuất từ câu tìm kiếm (6 yếu tố của plan 01) */}
+        {/* Ý định AI trích xuất từ câu tìm kiếm (plan 01; food/drink giờ là type-tag — plan 09) */}
         {parsed && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            {parsed.category && (
-              <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-                {parsed.category === "food" ? "🍽 Đồ ăn" : "🥤 Giải khát"}
-              </span>
-            )}
             {parsed.dishes.map((d) => (
               <span
                 key={`dish-${d}`}

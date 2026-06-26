@@ -3,7 +3,6 @@ import { requireCanEdit, authzResponse } from "@/lib/authz";
 import {
   requireIntId,
   requireText,
-  optionalKind,
   optionalOrder,
   validationResponse,
 } from "@/lib/adminValidate";
@@ -35,14 +34,13 @@ export async function PATCH(
 
     const body = await request.json().catch(() => ({}));
     const categoryName = requireText(body.category_name, "Tên nhóm");
-    const kind = optionalKind(body.kind);
     const displayOrder = optionalOrder(body.display_order);
 
     await query(
       `UPDATE menu_categories
-          SET category_name = $1, kind = $2, display_order = $3
-        WHERE id = $4`,
-      [categoryName, kind, displayOrder, categoryId],
+          SET category_name = $1, display_order = $2
+        WHERE id = $3`,
+      [categoryName, displayOrder, categoryId],
     );
 
     return Response.json({ ok: true });

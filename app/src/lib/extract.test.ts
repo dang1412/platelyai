@@ -14,7 +14,6 @@ vi.mock("@google/genai", () => ({
 }));
 
 const FALLBACK: ParsedQuery = {
-  category: null,
   dishes: [],
   tags: [],
   location: null,
@@ -23,10 +22,9 @@ const FALLBACK: ParsedQuery = {
 };
 
 describe("parseExtraction", () => {
-  it("đủ 6 trường, validate tag trong vocab", () => {
+  it("đủ trường, validate tag trong vocab", () => {
     const out = parseExtraction(
       {
-        category: "food",
         dishes: ["phở bò"],
         tags: ["bình dân"],
         location: "Vincom",
@@ -36,7 +34,6 @@ describe("parseExtraction", () => {
       ["bình dân", "cà phê"],
     );
     expect(out).toEqual({
-      category: "food",
       dishes: ["phở bò"],
       tags: ["bình dân"],
       location: "Vincom",
@@ -45,17 +42,18 @@ describe("parseExtraction", () => {
     });
   });
 
-  it("drink + tags rỗng khi vocab rỗng", () => {
+  it("type-tag (giải khát) khi không có món → giữ nếu trong vocab", () => {
     const out = parseExtraction(
-      { category: "drink", dishes: ["chè"], tags: [], location: null, max_price: null, wants_cheap: false },
-      [],
+      { dishes: [], tags: ["giải khát"], location: null, max_price: null, wants_cheap: false },
+      ["giải khát", "quán ăn"],
     );
-    expect(out.category).toBe("drink");
-    expect(out.tags).toEqual([]);
+    expect(out.dishes).toEqual([]);
+    expect(out.tags).toEqual(["giải khát"]);
   });
 
-  it("category sai enum → null", () => {
-    expect(parseExtraction({ category: "đồ ăn" }, []).category).toBeNull();
+  it("type-tag ngoài vocab → bị loại", () => {
+    const out = parseExtraction({ dishes: [], tags: ["quán ăn"] }, []);
+    expect(out.tags).toEqual([]);
   });
 
   it("loại tag ngoài vocab", () => {

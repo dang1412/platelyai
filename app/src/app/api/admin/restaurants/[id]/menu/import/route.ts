@@ -4,7 +4,6 @@ import {
   requireText,
   optionalText,
   optionalPrice,
-  optionalKind,
   optionalOrder,
   validationResponse,
   ValidationError,
@@ -33,7 +32,6 @@ export async function POST(
     body.categories.forEach((cat: unknown, ci: number) => {
       const c = cat as Record<string, unknown>;
       const categoryName = requireText(c?.category_name, `Tên nhóm #${ci + 1}`);
-      const kind = optionalKind(c?.kind);
       const displayOrder = c?.display_order != null ? optionalOrder(c.display_order) : ci;
 
       const rawItems = Array.isArray(c?.items) ? c.items : [];
@@ -47,7 +45,7 @@ export async function POST(
       });
 
       if (items.length === 0) return; // bỏ nhóm rỗng
-      categories.push({ categoryName, kind, displayOrder, items });
+      categories.push({ categoryName, displayOrder, items });
     });
 
     if (categories.length === 0) {

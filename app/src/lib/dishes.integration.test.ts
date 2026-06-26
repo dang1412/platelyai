@@ -26,8 +26,8 @@ d("resolveDishes trên search_vec (DB thật)", () => {
     );
     restaurantId = Number(r[0].id);
     const c = await query<{ id: string }>(
-      `INSERT INTO menu_categories (restaurant_id, category_name, kind)
-       VALUES ($1, 'Phở bò', 'food') RETURNING id`,
+      `INSERT INTO menu_categories (restaurant_id, category_name)
+       VALUES ($1, 'Phở bò') RETURNING id`,
       [restaurantId],
     );
     categoryId = Number(c[0].id);
@@ -59,14 +59,14 @@ d("resolveDishes trên search_vec (DB thật)", () => {
   });
 
   it("phraseto khớp cụm liền kề → dist 0 (món 'Tái' dưới cat 'Phở bò')", async () => {
-    const out = await resolveDishes(["phở bò tái"], null, null, ORIGIN);
+    const out = await resolveDishes(["phở bò tái"], null, ORIGIN);
     const m = out.find((x) => x.itemId === itemId);
     expect(m).toBeDefined();
     expect(m!.dist).toBe(0);
   });
 
   it("bỏ từ giữa 'phở tái' → chỉ plainto khớp → LOOSE_LEX_DIST", async () => {
-    const out = await resolveDishes(["phở tái"], null, null, ORIGIN);
+    const out = await resolveDishes(["phở tái"], null, ORIGIN);
     const m = out.find((x) => x.itemId === itemId);
     expect(m).toBeDefined();
     expect(m!.dist).toBe(LOOSE_LEX_DIST);
@@ -76,10 +76,10 @@ d("resolveDishes trên search_vec (DB thật)", () => {
     await query(`UPDATE menu_categories SET category_name = 'Phở gà' WHERE id = $1`, [categoryId]);
     try {
       // Giờ search_vec = "phở gà tái": "phở gà tái" khớp dist 0; "phở bò tái" không còn 'bò' → mất.
-      const gaOut = await resolveDishes(["phở gà tái"], null, null, ORIGIN);
+      const gaOut = await resolveDishes(["phở gà tái"], null, ORIGIN);
       expect(gaOut.find((x) => x.itemId === itemId)?.dist).toBe(0);
 
-      const boOut = await resolveDishes(["phở bò tái"], null, null, ORIGIN);
+      const boOut = await resolveDishes(["phở bò tái"], null, ORIGIN);
       expect(boOut.find((x) => x.itemId === itemId)).toBeUndefined();
     } finally {
       await query(`UPDATE menu_categories SET category_name = 'Phở bò' WHERE id = $1`, [categoryId]);

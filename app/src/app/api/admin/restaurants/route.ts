@@ -9,7 +9,6 @@ import {
 import {
   requireText,
   optionalText,
-  optionalBool,
   optionalLatLng,
   validationResponse,
 } from "@/lib/adminValidate";
@@ -44,20 +43,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     const address = optionalText(body.address);
     const phone = optionalText(body.phone);
     const website = optionalText(body.website);
-    const servesFood = optionalBool(body.serves_food, false);
-    const servesDrink = optionalBool(body.serves_drink, false);
     const { lat, lng } = optionalLatLng(body.lat, body.lng);
 
     // ST_MakePoint dùng thứ tự (lng, lat). location = NULL nếu thiếu toạ độ.
     const rows = await query(
       `INSERT INTO restaurants
-         (name, address, phone, website, serves_food, serves_drink, lat, lng, location, source)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8,
-               CASE WHEN $7::float8 IS NULL OR $8::float8 IS NULL THEN NULL
-                    ELSE ST_SetSRID(ST_MakePoint($8, $7), 4326)::geography END,
+         (name, address, phone, website, lat, lng, location, source)
+       VALUES ($1, $2, $3, $4, $5, $6,
+               CASE WHEN $5::float8 IS NULL OR $6::float8 IS NULL THEN NULL
+                    ELSE ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography END,
                'admin')
        RETURNING id`,
-      [name, address, phone, website, servesFood, servesDrink, lat, lng],
+      [name, address, phone, website, lat, lng],
     );
 
     return Response.json({ id: Number(rows[0].id) }, { status: 201 });

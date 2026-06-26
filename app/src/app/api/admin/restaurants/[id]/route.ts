@@ -4,7 +4,6 @@ import {
   requireIntId,
   requireText,
   optionalText,
-  optionalBool,
   optionalLatLng,
   validationResponse,
 } from "@/lib/adminValidate";
@@ -26,22 +25,19 @@ export async function PATCH(
     const address = optionalText(body.address);
     const phone = optionalText(body.phone);
     const website = optionalText(body.website);
-    const servesFood = optionalBool(body.serves_food, false);
-    const servesDrink = optionalBool(body.serves_drink, false);
     const { lat, lng } = optionalLatLng(body.lat, body.lng);
 
     // ST_MakePoint dùng thứ tự (lng, lat). Form edit luôn gửi lại toạ độ hiện có nên không mất dữ liệu.
     const rows = await query(
       `UPDATE restaurants
           SET name = $1, address = $2, phone = $3, website = $4,
-              serves_food = $5, serves_drink = $6,
-              lat = $7, lng = $8,
-              location = CASE WHEN $7::float8 IS NULL OR $8::float8 IS NULL THEN NULL
-                              ELSE ST_SetSRID(ST_MakePoint($8, $7), 4326)::geography END,
+              lat = $5, lng = $6,
+              location = CASE WHEN $5::float8 IS NULL OR $6::float8 IS NULL THEN NULL
+                              ELSE ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography END,
               updated_at = now()
-        WHERE id = $9
+        WHERE id = $7
       RETURNING id`,
-      [name, address, phone, website, servesFood, servesDrink, lat, lng, restaurantId],
+      [name, address, phone, website, lat, lng, restaurantId],
     );
     if (rows.length === 0) {
       return Response.json({ error: "Không tìm thấy quán" }, { status: 404 });

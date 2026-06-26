@@ -1,5 +1,4 @@
 import { withTransaction, type TxQuery } from "./db";
-import type { MenuKind } from "./adminRestaurant";
 
 // Merge/upsert menu đã parse vào DB (xem plans/05_admin_menu_parse.md):
 // - Category: match theo (restaurant_id, lower(category_name)) → tái dùng, không tạo trùng.
@@ -14,7 +13,6 @@ export type ImportItem = {
 };
 export type ImportCategory = {
   categoryName: string;
-  kind: MenuKind | null;
   displayOrder: number;
   items: ImportItem[];
 };
@@ -24,30 +22,23 @@ export type ImportResult = {
   itemsUpdated: number;
 };
 
-// Tìm/tạo category, trả id. Tái dùng category trùng tên (không phân biệt hoa/thường);
-// cập nhật kind nếu trước đó NULL mà input có.
+// Tìm/tạo category, trả id. Tái dùng category trùng tên (không phân biệt hoa/thường).
 async function upsertCategory(
   q: TxQuery,
   restaurantId: number,
   cat: ImportCategory,
 ): Promise<number> {
-  const found = await q<{ id: string; kind: MenuKind | null }>(
-    `SELECT id, kind FROM menu_categories
+  const found = await q<{ id: string }>(
+    `SELECT id FROM menu_categories
       WHERE restaurant_id = $1 AND lower(category_name) = lower($2)
       ORDER BY id ASC LIMIT 1`,
     [restaurantId, cat.categoryName],
   );
-  if (found[0]) {
-    const id = Number(found[0].id);
-    if (found[0].kind == null && cat.kind != null) {
-      await q(`UPDATE menu_categories SET kind = $1 WHERE id = $2`, [cat.kind, id]);
-    }
-    return id;
-  }
+  if (found[0]) return Number(found[0].id);
   const inserted = await q<{ id: string }>(
-    `INSERT INTO menu_categories (restaurant_id, category_name, kind, display_order)
-     VALUES ($1, $2, $3, $4) RETURNING id`,
-    [restaurantId, cat.categoryName, cat.kind, cat.displayOrder],
+    `INSERT INTO menu_categories (restaurant_id, category_name, display_order)
+     VALUES ($1, $2, $3) RETURNING id`,
+    [restaurantId, cat.categoryName, cat.displayOrder],
   );
   return Number(inserted[0].id);
 }

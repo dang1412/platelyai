@@ -10,9 +10,8 @@ const d = hasDb ? describe : describe.skip;
 const cat = (
   categoryName: string,
   items: ImportCategory["items"],
-  kind: ImportCategory["kind"] = null,
   displayOrder = 0,
-): ImportCategory => ({ categoryName, kind, displayOrder, items });
+): ImportCategory => ({ categoryName, displayOrder, items });
 
 d("importMenu (DB thật)", () => {
   let restaurantId: number;
@@ -39,7 +38,7 @@ d("importMenu (DB thật)", () => {
       cat("Món chính", [
         { name: "Phở bò", price: 45000, description: "Tái nạm" },
         { name: "Bún chả", price: 40000, description: null },
-      ], "food"),
+      ]),
     ]);
     expect(res).toEqual({ categories: 1, itemsInserted: 2, itemsUpdated: 0 });
 
@@ -53,7 +52,7 @@ d("importMenu (DB thật)", () => {
 
   it("upsert: import lại cùng tên → UPDATE giá, không tạo dòng mới", async () => {
     const res = await importMenu(restaurantId, [
-      cat("Món chính", [{ name: "Phở bò", price: 50000, description: null }], "food"),
+      cat("Món chính", [{ name: "Phở bò", price: 50000, description: null }]),
     ]);
     expect(res.itemsInserted).toBe(0);
     expect(res.itemsUpdated).toBe(1);
@@ -69,7 +68,7 @@ d("importMenu (DB thật)", () => {
 
   it("giá null trong input → giữ giá cũ", async () => {
     await importMenu(restaurantId, [
-      cat("Món chính", [{ name: "Phở bò", price: null, description: null }], "food"),
+      cat("Món chính", [{ name: "Phở bò", price: null, description: null }]),
     ]);
     const rows = await query<{ price: number }>(
       `SELECT price FROM menu_items
@@ -81,7 +80,7 @@ d("importMenu (DB thật)", () => {
 
   it("item đổi nhóm → chuyển category_id, không nhân bản", async () => {
     await importMenu(restaurantId, [
-      cat("Đặc biệt", [{ name: "Phở bò", price: 50000, description: null }], "food"),
+      cat("Đặc biệt", [{ name: "Phở bò", price: 50000, description: null }]),
     ]);
     const rows = await query<{ id: string; category_name: string }>(
       `SELECT mi.id, mc.category_name
@@ -111,7 +110,7 @@ d("importMenu (DB thật)", () => {
       [restaurantId],
     );
     await importMenu(restaurantId, [
-      cat("Đồ uống", [{ name: "Trà đá", price: 5000, description: null }], "drink"),
+      cat("Đồ uống", [{ name: "Trà đá", price: 5000, description: null }]),
     ]);
     const after = await query<{ name: string }>(
       `SELECT name FROM menu_items WHERE restaurant_id = $1 AND normalized_name = lower(unaccent($2))`,

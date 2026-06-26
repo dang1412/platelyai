@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { MenuKind } from "@/lib/adminRestaurant";
 import type { ParsedMenu } from "@/lib/menuParse";
 import { adminFetch } from "./adminFetch";
 
@@ -11,12 +10,11 @@ const field =
 
 // Preview ở client cho phép sửa giá dạng chuỗi trước khi gửi.
 type DraftItem = { name: string; price: string; description: string };
-type DraftCategory = { categoryName: string; kind: "" | MenuKind; items: DraftItem[] };
+type DraftCategory = { categoryName: string; items: DraftItem[] };
 
 function toDraft(menu: ParsedMenu): DraftCategory[] {
   return menu.categories.map((c) => ({
     categoryName: c.categoryName,
-    kind: c.kind ?? "",
     items: c.items.map((i) => ({
       name: i.name,
       price: i.price?.toString() ?? "",
@@ -77,7 +75,6 @@ export default function MenuImport({ restaurantId }: { restaurantId: number }) {
         .filter((c) => c.items.length > 0)
         .map((c, ci) => ({
           category_name: c.categoryName,
-          kind: c.kind || null,
           display_order: ci,
           items: c.items.map((i) => ({
             name: i.name,
@@ -155,20 +152,6 @@ export default function MenuImport({ restaurantId }: { restaurantId: number }) {
                   }
                   placeholder="Tên nhóm"
                 />
-                <select
-                  className={field}
-                  value={c.kind}
-                  onChange={(e) =>
-                    setDraft((d) =>
-                      d!.map((x, i) => (i !== ci ? x : { ...x, kind: e.target.value as "" | MenuKind })),
-                    )
-                  }
-                >
-                  <option value="">Loại —</option>
-                  <option value="food">Đồ ăn</option>
-                  <option value="drink">Đồ uống</option>
-                  <option value="other">Khác</option>
-                </select>
               </div>
               {c.items.map((it, ii) => (
                 <div key={ii} className="flex flex-wrap items-center gap-2">
