@@ -29,6 +29,10 @@ Sau khi viết: **chạy tay lên DB dev** (file `db/init/*` chỉ auto-run khi 
 đã có dữ liệu). Dùng `query()`/psql tham số hoá đúng convention; trong file SQL seed không có
 input động nên không cần `$n`.
 
+## Commit
+
+`6d56788` — feat(search): thêm cột search_vec gộp category+tên món + trigger
+
 ## Done khi
 
 - File `db/init/04_menu_search_vec.sql` tồn tại, chạy idempotent (chạy 2 lần không lỗi).
