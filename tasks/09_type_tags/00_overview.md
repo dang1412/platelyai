@@ -18,7 +18,7 @@ Xoá trục cứng food/drink (`serves_food`/`serves_drink`, `menu_categories.ki
 - [x] [05_admin_serves.md](05_admin_serves.md) — gỡ serves_food/serves_drink khỏi admin
 - [x] [06_admin_kind.md](06_admin_kind.md) — gỡ kind khỏi parse/import/validate/UI
 - [x] [07_drop_columns.md](07_drop_columns.md) — DROP cột (phase 2, sau khi 1–6 verified)
-- [ ] [08_finalize.md](08_finalize.md) — lint/test/build + PR
+- [x] [08_finalize.md](08_finalize.md) — lint/test/build + PR
 
 ## MUST nhắc lại (AGENTS)
 - SQL chỉ qua `query()`, tham số hoá `$1,$2…`; backfill ở `db/init/*.sql` **mới** (không sửa `01_schema.sql`).

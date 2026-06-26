@@ -1,5 +1,7 @@
 # 08 — Finalize: lint/test/build + PR
 
+> `edfd72f` — refactor(search): xoá type FoodCategory; lint+test(101)+build xanh ✅
+
 ## Vì sao
 Chốt feature: đảm bảo xanh toàn bộ trước khi mở PR (AGENTS §7).
 
