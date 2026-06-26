@@ -1,6 +1,17 @@
-import { describe, it, expect } from "vitest";
-import { parseExtraction } from "./extract";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { parseExtraction, extractQuery } from "./extract";
+import { _resetExtractCache } from "./extractCache";
 import type { ParsedQuery } from "./types";
+
+// Mock SDK Gemini: extractQuery test ở tầng cache/dedupe, không gọi mạng thật.
+const { generateContentMock } = vi.hoisted(() => ({ generateContentMock: vi.fn() }));
+vi.mock("@google/genai", () => ({
+  // regular function (không arrow) để dùng được với `new GoogleGenAI()`.
+  GoogleGenAI: vi.fn(function () {
+    return { models: { generateContent: generateContentMock } };
+  }),
+  Type: { OBJECT: "OBJECT", STRING: "STRING", ARRAY: "ARRAY", NUMBER: "NUMBER", BOOLEAN: "BOOLEAN" },
+}));
 
 const FALLBACK: ParsedQuery = {
   category: null,
@@ -73,5 +84,50 @@ describe("parseExtraction", () => {
   it("raw null/undefined → fallback", () => {
     expect(parseExtraction(null, ["cà phê"])).toEqual(FALLBACK);
     expect(parseExtraction(undefined, [])).toEqual(FALLBACK);
+  });
+});
+
+describe("extractQuery cache", () => {
+  const ok = (raw: object) => ({ text: JSON.stringify(raw) });
+
+  beforeEach(() => {
+    _resetExtractCache();
+    generateContentMock.mockReset();
+    process.env.GEMINI_API_KEY = "test-key";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("cùng q 2 lần → Gemini chỉ gọi 1 lần (cache hit)", async () => {
+    generateContentMock.mockResolvedValue(ok({ dishes: ["phở bò"], tags: [], wants_cheap: false }));
+    const a = await extractQuery("phở bò", []);
+    const b = await extractQuery("phở bò", []);
+    expect(generateContentMock).toHaveBeenCalledTimes(1);
+    expect(a.dishes).toEqual(["phở bò"]);
+    expect(b).toEqual(a);
+  });
+
+  it("q chuẩn hoá (hoa/thường, khoảng trắng) → vẫn cache hit", async () => {
+    generateContentMock.mockResolvedValue(ok({ dishes: ["phở"], tags: [], wants_cheap: false }));
+    await extractQuery("Phở", []);
+    await extractQuery("  phở ", []);
+    expect(generateContentMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("lỗi Gemini → fallback, KHÔNG cache → lượt sau gọi lại", async () => {
+    generateContentMock
+      .mockRejectedValueOnce(new Error("503 overloaded"))
+      .mockResolvedValueOnce(ok({ dishes: ["bún"], tags: [], wants_cheap: false }));
+    const a = await extractQuery("bún chả", []);
+    expect(a.dishes).toEqual([]); // fallback
+    const b = await extractQuery("bún chả", []);
+    expect(generateContentMock).toHaveBeenCalledTimes(2);
+    expect(b.dishes).toEqual(["bún"]);
+  });
+
+  it("vocab khác → key khác → gọi Gemini lại", async () => {
+    generateContentMock.mockResolvedValue(ok({ dishes: ["trà"], tags: [], wants_cheap: false }));
+    await extractQuery("trà sữa", ["a"]);
+    await extractQuery("trà sữa", ["a", "b"]);
+    expect(generateContentMock).toHaveBeenCalledTimes(2);
   });
 });
