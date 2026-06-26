@@ -46,8 +46,6 @@ export type EditableRestaurant = {
   id: number;
   name: string;
   address: string | null;
-  servesFood: boolean | null;
-  servesDrink: boolean | null;
 };
 
 // Danh sách quán user được sửa, lọc theo tên (ILIKE, dùng index trgm). Admin thấy tất cả;
@@ -60,9 +58,7 @@ export async function listEditableRestaurants(
 
   if (user.role === "admin") {
     return query<EditableRestaurant>(
-      `SELECT id, name, address,
-              serves_food  AS "servesFood",
-              serves_drink AS "servesDrink"
+      `SELECT id, name, address
          FROM restaurants
         WHERE ($1::text IS NULL OR name ILIKE $1)
         ORDER BY name ASC
@@ -73,9 +69,7 @@ export async function listEditableRestaurants(
 
   if (user.role === "owner") {
     return query<EditableRestaurant>(
-      `SELECT r.id, r.name, r.address,
-              r.serves_food  AS "servesFood",
-              r.serves_drink AS "servesDrink"
+      `SELECT r.id, r.name, r.address
          FROM restaurants r
          JOIN restaurant_owners ro ON ro.restaurant_id = r.id
         WHERE ro.user_id = $1

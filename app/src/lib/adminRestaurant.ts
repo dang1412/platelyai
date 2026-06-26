@@ -28,8 +28,6 @@ export type RestaurantForEdit = {
   address: string | null;
   phone: string | null;
   website: string | null;
-  servesFood: boolean | null;
-  servesDrink: boolean | null;
   lat: number | null;
   lng: number | null;
   rating: string | null; // NUMERIC → pg trả string
@@ -43,8 +41,6 @@ export async function getRestaurantForEdit(
 ): Promise<RestaurantForEdit | null> {
   const rows = await query(
     `SELECT id, name, address, phone, website, lat, lng, rating,
-            serves_food  AS "servesFood",
-            serves_drink AS "servesDrink",
             rating_count AS "ratingCount"
        FROM restaurants WHERE id = $1 LIMIT 1`,
     [restaurantId],
@@ -125,8 +121,6 @@ export async function getRestaurantForEdit(
     address: (r.address as string | null) ?? null,
     phone: (r.phone as string | null) ?? null,
     website: (r.website as string | null) ?? null,
-    servesFood: (r.servesFood as boolean | null) ?? null,
-    servesDrink: (r.servesDrink as boolean | null) ?? null,
     lat: r.lat != null ? Number(r.lat) : null,
     lng: r.lng != null ? Number(r.lng) : null,
     rating: (r.rating as string | null) ?? null,
