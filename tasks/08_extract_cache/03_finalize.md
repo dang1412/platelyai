@@ -17,6 +17,12 @@ Chốt feature, đảm bảo xanh trước PR theo §7 AGENTS.
   cache theo `q`+vocabSig, single-flight, chỉ cache thành công, in-memory per-process (Redis sau).
 - Tick checklist `00_overview.md` + thêm link commit từng task (commit docs-link riêng).
 
+## Kết quả
+
+- `pnpm lint` sạch · `pnpm test` 96/96 · `pnpm build` OK (2026-06-26).
+- `extractCache.ts` 82 LOC · `extract.ts` 139 LOC (<300). Không `.env` trong diff, không thêm dependency.
+- 5 commit ahead `main`. **PR: chờ user xác nhận** trước khi push `feat/extract-cache`.
+
 ## Done khi
 
 - `pnpm lint && pnpm test && pnpm build` xanh.
