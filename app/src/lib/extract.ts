@@ -1,4 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { buildKey, getOrCompute } from "./extractCache";
 import type { FoodCategory, ParsedQuery } from "./types";
 
 // Bước 1 — parse câu tự nhiên → ParsedQuery (6 yếu tố) bằng Gemini.
@@ -89,40 +90,50 @@ Không thêm thông tin ngoài câu.`;
 
 // Gọi Gemini rồi đưa JSON thô vào parseExtraction. Thiếu key / lỗi / parse fail → fallback
 // (downstream rơi vào nhánh QUÁN, rank theo rating — không vỡ).
+//
+// Cache in-memory theo (q + vocab) qua getOrCompute (plan 08): cùng câu hỏi không gọi lại Gemini
+// (ca bật/tắt vị trí re-fetch cùng q; chống "high demand" do trùng lặp/đông người). compute trả
+// null khi fallback/lỗi → KHÔNG cache (503 thoáng qua được thử lại lần sau).
 export async function extractQuery(
   q: string,
   vocabTags: string[],
 ): Promise<ParsedQuery> {
   if (!process.env.GEMINI_API_KEY || !q.trim()) return fallback();
+  const apiKey = process.env.GEMINI_API_KEY;
+  const key = buildKey(q, vocabTags);
 
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: q,
-      config: {
-        systemInstruction: systemInstruction(vocabTags),
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            category: { type: Type.STRING, nullable: true },
-            dishes: { type: Type.ARRAY, items: { type: Type.STRING } },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-            location: { type: Type.STRING, nullable: true },
-            max_price: { type: Type.NUMBER, nullable: true },
-            wants_cheap: { type: Type.BOOLEAN },
+  const result = await getOrCompute(key, async () => {
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: MODEL,
+        contents: q,
+        config: {
+          systemInstruction: systemInstruction(vocabTags),
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              category: { type: Type.STRING, nullable: true },
+              dishes: { type: Type.ARRAY, items: { type: Type.STRING } },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              location: { type: Type.STRING, nullable: true },
+              max_price: { type: Type.NUMBER, nullable: true },
+              wants_cheap: { type: Type.BOOLEAN },
+            },
+            required: ["dishes", "tags", "wants_cheap"],
           },
-          required: ["dishes", "tags", "wants_cheap"],
         },
-      },
-    });
+      });
 
-    const text = response.text;
-    if (!text) return fallback();
-    return parseExtraction(JSON.parse(text) as RawExtraction, vocabTags);
-  } catch (e) {
-    console.error("extractQuery failed:", e);
-    return fallback();
-  }
+      const text = response.text;
+      if (!text) return null; // không cache khi thiếu output
+      return parseExtraction(JSON.parse(text) as RawExtraction, vocabTags);
+    } catch (e) {
+      console.error("extractQuery failed:", e);
+      return null; // lỗi → KHÔNG cache
+    }
+  });
+
+  return result ?? fallback();
 }
