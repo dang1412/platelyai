@@ -25,10 +25,10 @@ export const DISH_PER_RESTAURANT = 3;
 // (gate, threshold] vẫn hiện ra (recall) nhưng không cộng coverage. Tunable.
 export const COVERAGE_DIST_THRESHOLD = 0.2;
 
-// dist gán cho món match qua TÊN CATEGORY (menu Việt hay để tên món ở category, tên món chỉ còn
-// biến thể: "Phở Tái" → "Tái lăn"). Nhỏ hơn COVERAGE_DIST_THRESHOLD (vẫn tính phủ) nhưng > 0 để
-// món match đích danh tên (dist=0) vẫn thắng khi chọn chip.
-export const LEX_CATEGORY_DIST = 0.05;
+// dist gán cho món CHỈ khớp PLAINTO (đủ token nhưng KHÔNG liền kề/đúng thứ tự) trên search_vec —
+// tier recall cho ca "phở tái" (bỏ "bò") hay khác thứ tự. < COVERAGE_DIST_THRESHOLD (0.2) → VẪN
+// tính phủ (khớp đúng ngữ nghĩa cho tên món Việt ngắn). Tunable; đặt > 0.2 nếu muốn loại khỏi coverage.
+export const LOOSE_LEX_DIST = 0.12;
 
 // dist gán cho món khớp qua ĐỒNG NGHĨA (bảng synonyms.ts), vd hỏi "gà rán" trúng "gà chiên giòn".
 // > 0 để khớp đích danh tên (dist=0) vẫn thắng, nhưng < COVERAGE_DIST_THRESHOLD → VẪN tính coverage
@@ -42,11 +42,11 @@ export const RADIUS_M = 1500;
 // Gom món từ 2 nguồn rồi dedup theo itemId (giữ dist nhỏ nhất):
 //  1) Semantic KNN trên menu_items.embedding — embed "Món: <tên>" (KHÔNG prefix khác, khớp đúng
 //     dạng đã sinh embedding trong DB), giữ dist <= DISH_DIST_THRESHOLD.
-//  2) Lexical (FTS): tên món khớp NGUYÊN TỪ trong name CÓ DẤU → dist = 0 (mạnh nhất), bắt khớp tên
-//     chính xác mà KNN có thể xếp thấp. Dùng full-text 'simple' (token theo phi-alnum, giữ dấu) để
-//     hit GIN index thay vì seq scan — vừa giữ ngữ nghĩa ranh-giới-từ ("chè" ⊄ "cheese") vừa
-//     sublinear khi DB lớn. + đồng nghĩa (synonyms.ts) → SYN_LEX_DIST. Match thêm trên TÊN CATEGORY
-//     (dist = LEX_CATEGORY_DIST) cho ca tên món bị cắt theo category. Xem plans/01_4b_synonyms.md.
+//  2) Lexical (FTS) trên menu_items.search_vec — tsvector GỘP "category món" (xem plan 07), GIN
+//     index menu_items_search_vec_idx. Match 2 mức trên CÙNG search_vec: phraseto (cụm liền kề +
+//     đúng thứ tự) → tên gốc dist 0, đồng nghĩa (synonyms.ts) → SYN_LEX_DIST; chỉ plainto (đủ token,
+//     không liền kề) → LOOSE_LEX_DIST (recall "phở tái"/khác thứ tự). 'simple' = token phi-alnum,
+//     GIỮ DẤU ("chè" ⊄ "cheese"). Cột gộp đã chứa token category → KHÔNG còn nhánh category-only.
 //
 // Lọc cứng NGAY trong SQL (không lọc sau — có LIMIT DISH_TOP_K, lọc sau sẽ đánh rơi món xếp > TOP_K):
 //  - maxPrice (yếu tố 5): mi.price <= maxPrice. price IS NULL bị loại khi có maxPrice, chấp nhận.
@@ -115,18 +115,25 @@ export async function resolveDishes(
     //   }
     // }
 
-    // ── Lexical (+ đồng nghĩa), full-text search ─────────────────────────────────
-    // Mở rộng tên hỏi ra các biến thể đồng nghĩa (synonyms.ts), match qua FTS 'simple' để DÙNG
-    // ĐƯỢC GIN index (menu_items_name_fts_idx) — sublinear khi DB lớn, KHÔNG seq scan. 'simple' tách
-    // token theo phi-alnum + GIỮ DẤU → đúng ngữ nghĩa ranh-giới-từ cũ ("chè" ⊄ "cheese"). Mỗi biến
-    // thể → 1 phraseto_tsquery (cụm nhiều từ giữ thứ tự, vd "bún riêu" → bún<->riêu), OR bằng `||`.
-    // exactTsq = CHỈ tên gốc (variants[0]) → name_exact (dist 0); anyTsq = cả đồng nghĩa → SYN_LEX_DIST.
+    // ── Lexical (+ đồng nghĩa) trên search_vec, full-text search ──────────────────
+    // Mở rộng tên hỏi ra biến thể đồng nghĩa (synonyms.ts). Match trên mi.search_vec (cột GỘP
+    // "category món", GIN index) để DÙNG ĐƯỢC index — sublinear, KHÔNG seq scan. 'simple' = token
+    // phi-alnum + GIỮ DẤU ("chè" ⊄ "cheese"). Mỗi biến thể push 1 param, tham chiếu ở CẢ plainto lẫn
+    // phraseto:
+    //  - GATE (WHERE) = plainto (đủ token, không cần liền kề) OR các biến thể — rộng nhất, gom hết
+    //    ứng viên. phraseto-match ⊆ plainto-match nên plainto làm gate là đủ.
+    //  - name_exact  = phraseto tên GỐC (variants[0]) → dist 0.
+    //  - name_phrase = phraseto OR các biến thể → SYN_LEX_DIST (khớp cụm, kể cả qua đồng nghĩa).
+    //  - chỉ plainto (không phraseto) → LOOSE_LEX_DIST.
     const variants = expandSynonyms(queryDish);
     const params: unknown[] = [];
-    const tsq = (v: string) => `phraseto_tsquery('simple', $${params.push(v)})`;
-    const anyTsq = variants.map(tsq).join(" || ");
-    const exactTsq = `phraseto_tsquery('simple', $1)`; // variants[0] = param $1 (push đầu tiên)
-    // Lọc kind/price — tham chiếu lại cùng $n ở CẢ HAI nhánh UNION (không push lại).
+    const vIdx = variants.map((v) => params.push(v)); // mỗi biến thể 1 param $idx, dùng lại 2 nơi
+    const plainOf = (i: number) => `plainto_tsquery('simple', $${i})`;
+    const phraseOf = (i: number) => `phraseto_tsquery('simple', $${i})`;
+    const anyPlainto = vIdx.map(plainOf).join(" || ");
+    const anyPhraseto = vIdx.map(phraseOf).join(" || ");
+    const exactPhraseto = phraseOf(vIdx[0]); // variants[0] = tên gốc
+    // Lọc kind/price (một nhánh, tham chiếu $n trực tiếp).
     const kindFilter =
       category != null
         ? `AND mi.category_id IN (SELECT id FROM menu_categories WHERE kind = $${params.push(category)})`
@@ -150,41 +157,30 @@ export async function resolveDishes(
       ord = "r.rating";
       orderClause = "ORDER BY ord DESC NULLS LAST, id ASC";
     }
-    // UNION ALL hai nhánh để MỖI nhánh hit index riêng (gộp OR ép seq scan): nhánh TÊN dùng FTS GIN,
-    // nhánh CATEGORY resolve category qua FTS rồi lọc mi.category_id (btree). Trùng itemId giữa 2
-    // nhánh do add() dedup theo dist nhỏ nhất.
+    // Một nhánh duy nhất (search_vec đã gộp category → bỏ UNION category-only cũ).
     // Cap DISH_PER_RESTAURANT món/quán (ROW_NUMBER partition theo quán) TRƯỚC khi cắt TOP_K, để pool
     // trải đều ra nhiều quán thay vì dồn vào vài quán menu to. Ưu tiên giữ món khớp tên đích danh
-    // (name_exact) rồi đồng nghĩa (name_any) khi chọn món đại diện của quán.
+    // (name_exact) rồi khớp cụm/đồng nghĩa (name_phrase) khi chọn món đại diện của quán.
     // wantsCheap (yếu tố 6): chèn `price ASC` vào SAU tier khớp tên → quán giữ lại 3 món khớp RẺ nhất
     // (vẫn trong nhóm khớp chuẩn nhất, không để đồ phụ rẻ đè món chính). Vì cap chạy TRƯỚC TOP_K, đây
     // cũng là cách DUY NHẤT đảm bảo món rẻ sống sót để downstream tính cheapness + chip đúng món rẻ.
     const capOrder = wantsCheap
-      ? "u.name_exact DESC, u.name_any DESC, u.price ASC NULLS LAST, u.id ASC"
-      : "u.name_exact DESC, u.name_any DESC, u.id ASC";
+      ? "u.name_exact DESC, u.name_phrase DESC, u.price ASC NULLS LAST, u.id ASC"
+      : "u.name_exact DESC, u.name_phrase DESC, u.id ASC";
     const lex = await query<DishRow>(
-      `SELECT id, restaurant_id, name, price, name_exact, name_any FROM (
+      `SELECT id, restaurant_id, name, price, name_exact, name_phrase FROM (
          SELECT u.*, ROW_NUMBER() OVER (
                   PARTITION BY u.restaurant_id
                   ORDER BY ${capOrder}
                 ) AS rn
          FROM (
            SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-                  (to_tsvector('simple', lower(mi.name)) @@ (${exactTsq})) AS name_exact,
-                  TRUE AS name_any, ${ord} AS ord
+                  (mi.search_vec @@ (${exactPhraseto})) AS name_exact,
+                  (mi.search_vec @@ (${anyPhraseto}))   AS name_phrase,
+                  ${ord} AS ord
            FROM menu_items mi
            ${join}
-           WHERE to_tsvector('simple', lower(mi.name)) @@ (${anyTsq})
-             ${kindFilter}
-             ${priceFilter}
-           UNION ALL
-           SELECT mi.id, mi.restaurant_id, mi.name, mi.price,
-                  FALSE AS name_exact, FALSE AS name_any, ${ord} AS ord
-           FROM menu_items mi
-           ${join}
-           WHERE mi.category_id IN (
-                   SELECT id FROM menu_categories
-                   WHERE to_tsvector('simple', lower(category_name)) @@ (${anyTsq}))
+           WHERE mi.search_vec @@ (${anyPlainto})
              ${kindFilter}
              ${priceFilter}
          ) u
@@ -194,9 +190,9 @@ export async function resolveDishes(
        LIMIT ${DISH_TOP_K}`,
       params,
     );
-    // Đích danh tên → 0; đồng nghĩa → SYN_LEX_DIST; chỉ khớp tên category → LEX_CATEGORY_DIST.
+    // Đích danh tên (phraseto gốc) → 0; khớp cụm qua đồng nghĩa → SYN_LEX_DIST; chỉ plainto → LOOSE.
     for (const r of lex)
-      add(r, r.name_exact ? 0 : r.name_any ? SYN_LEX_DIST : LEX_CATEGORY_DIST, queryDish);
+      add(r, r.name_exact ? 0 : r.name_phrase ? SYN_LEX_DIST : LOOSE_LEX_DIST, queryDish);
   }
 
   return [...byItem.values()];
@@ -225,5 +221,5 @@ type DishRow = {
   price: number | string | null;
   dist?: number | string;
   name_exact?: boolean;
-  name_any?: boolean;
+  name_phrase?: boolean;
 };
