@@ -1,5 +1,7 @@
 # 05 — Admin: gỡ serves_food / serves_drink
 
+> Commit: `e952ccf` — feat(admin): gỡ serves_food/serves_drink khỏi tạo/sửa quán ✅
+
 ## Vì sao
 2 cột này thôi không còn vai trò (food/drink → tag). Gỡ khỏi luồng tạo/sửa quán để không còn
 ghi dữ liệu chết trước khi DROP cột (task 07).
