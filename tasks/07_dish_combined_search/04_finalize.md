@@ -17,6 +17,13 @@ Chốt feature: đảm bảo xanh toàn bộ trước khi mở PR theo §7 AGENT
 - Tick checklist trong `00_overview.md`, thêm link commit vào từng task đã xong (không tạo commit
   docs riêng).
 
+## Kết quả
+
+- `pnpm lint` sạch · `pnpm test` 89/89 · `pnpm build` OK (2026-06-26).
+- `dishes.ts` 225 LOC (<300). Không có `.env` trong diff. 7 commit ahead `main`.
+- DB backup trước thay đổi: `backups/plately_20260626_111155.dump` (pg_dump -Fc, local-only).
+- **PR: chờ user xác nhận** trước khi push `feat/dish-combined-search` + mở PR.
+
 ## Done khi
 
 - `pnpm lint && pnpm test && pnpm build` xanh.
