@@ -1,5 +1,7 @@
 # 04 — UI: bỏ badge category ở trang search
 
+> Commit: `4097d72` — feat(search): bỏ badge category ở trang search ✅
+
 ## Vì sao
 `ParsedQuery.category` đã bị bỏ (task 02); badge 🍽/🥤 không còn nguồn. food/drink giờ hiện tự
 nhiên trong list `parsed.tags`.
