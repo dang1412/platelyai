@@ -31,6 +31,10 @@ Sửa **`app/src/lib/extract.test.ts`** — thêm `describe("extractQuery cache"
 - (Tuỳ chọn) đổi vocab → key khác → gọi Gemini lại.
 - Giữ nguyên toàn bộ test `parseExtraction` cũ.
 
+## Commit
+
+`55d7a74` — feat(search): bọc extractQuery qua cache in-memory + single-flight
+
 ## Done khi
 
 - `extractQuery` dùng `getOrCompute`; lỗi/parse-fail → `null` (không cache) → `fallback()`.

@@ -17,7 +17,7 @@ Quyết định đã chốt: **in-memory** (không Redis lần này); **cache + 
 ## Checklist (theo thứ tự phụ thuộc)
 
 - [x] `01_extract_cache_lib.md` — `extractCache.ts` (LRU + TTL + single-flight + `buildKey` + `_reset`) + unit test thuần (`5667f4f`)
-- [ ] `02_integrate_extract.md` — bọc `extractQuery` qua cache (compute trả `null` khi fail); test caching mock `@google/genai`
+- [x] `02_integrate_extract.md` — bọc `extractQuery` qua cache (compute trả `null` khi fail); test caching mock `@google/genai` (`55d7a74`)
 - [ ] `03_finalize.md` — `pnpm lint && pnpm test && pnpm build` xanh (PR: chờ user)
 
 ## MUST nhắc lại (AGENTS.md)
