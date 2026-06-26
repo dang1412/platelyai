@@ -16,7 +16,7 @@ Xoá trục cứng food/drink (`serves_food`/`serves_drink`, `menu_categories.ki
 - [x] [03_search_drop_kind.md](03_search_drop_kind.md) — candidates.ts + dishes.ts bỏ category/kind
 - [x] [04_ui_badge.md](04_ui_badge.md) — page.tsx bỏ badge category
 - [x] [05_admin_serves.md](05_admin_serves.md) — gỡ serves_food/serves_drink khỏi admin
-- [ ] [06_admin_kind.md](06_admin_kind.md) — gỡ kind khỏi parse/import/validate/UI
+- [x] [06_admin_kind.md](06_admin_kind.md) — gỡ kind khỏi parse/import/validate/UI
 - [ ] [07_drop_columns.md](07_drop_columns.md) — DROP cột (phase 2, sau khi 1–6 verified)
 - [ ] [08_finalize.md](08_finalize.md) — lint/test/build + PR
 

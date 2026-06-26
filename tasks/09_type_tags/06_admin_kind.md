@@ -1,5 +1,7 @@
 # 06 — Admin: gỡ menu_categories.kind
 
+> Commit: `6b446f9` — feat(admin): gỡ menu_categories.kind khỏi parse/import/validate/UI ✅
+
 ## Vì sao
 `kind` (food/drink/other) không còn được search dùng (task 03). Gỡ khỏi parse/import/validate/UI
 để ngừng ghi trước khi DROP cột (task 07).
