@@ -31,6 +31,10 @@ Trong `app/src/lib/dishes.ts`, nhánh lexical của `resolveDishes`:
 **MUST:** chỉ qua `query()`, tham số hoá `$n` cho mọi biến thể/filter; không nội suy chuỗi
 (RADIUS_M hằng nội bộ giữ như cũ). Không tạo Pool mới.
 
+## Commit
+
+`da00dd4` — feat(search): match nhánh MÓN trên search_vec (phraseto + plainto), bỏ category-only
+
 ## Done khi
 
 - `dishes.ts` không còn `LEX_CATEGORY_DIST`, không còn UNION category-only; có `LOOSE_LEX_DIST`.

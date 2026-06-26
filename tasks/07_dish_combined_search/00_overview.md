@@ -18,7 +18,7 @@ category trước name**; **trigger DB** maintain (không sửa insert site app)
 ## Checklist (theo thứ tự phụ thuộc)
 
 - [x] `01_schema_search_vec.md` — `db/init/04_menu_search_vec.sql`: cột + 2 trigger + backfill + GIN index; chạy tay lên DB dev (`6d56788`)
-- [ ] `02_dishes_combined_match.md` — `dishes.ts`: dùng `search_vec`, plainto gate + cờ phraseto, bỏ category-only, hằng `LOOSE_LEX_DIST`
+- [x] `02_dishes_combined_match.md` — `dishes.ts`: dùng `search_vec`, plainto gate + cờ phraseto, bỏ category-only, hằng `LOOSE_LEX_DIST` (`da00dd4`)
 - [ ] `03_dishes_tests.md` — `dishes.test.ts`: bỏ assert category-only; thêm 3 tier; integration chạm Postgres thật (cột + trigger + EXPLAIN dùng index)
 - [ ] `04_finalize.md` — `pnpm lint && pnpm test && pnpm build` xanh (PR: chờ user)
 
