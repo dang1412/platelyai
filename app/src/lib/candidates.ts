@@ -7,7 +7,6 @@ import {
 } from "./dishes";
 import type { Candidate } from "./rank";
 import type {
-  FoodCategory,
   LatLng,
   MatchedDish,
   ParsedQuery,
@@ -16,7 +15,8 @@ import type {
 
 // Bước 3 — sinh ứng viên cho rerank. Hai nhánh (plan 01 §3):
 //  - MÓN  (dishes không rỗng): resolveDishes → gom menu_items về quán (coverage/matchQuality/chip).
-//  - QUÁN (dishes rỗng): lọc serves_*/bán kính/giá ở cấp quán; gắn chip giá/rẻ nếu cần.
+//  - QUÁN (dishes rỗng): lọc bán kính/giá ở cấp quán; gắn chip giá/rẻ nếu cần. Trục food/drink giờ
+//    là type-tag mềm (plan 09) → rank cộng điểm, KHÔNG lọc cứng ở đây.
 // Xem plans/01_6_route.md.
 
 const POOL_LIMIT = 100; // ko origin → top theo rating để rerank bounded (plan 01 §3 nhánh QUÁN)
@@ -127,14 +127,13 @@ export async function candidatesFromDishes(
   const matched = await resolveDishes(
     parsed.dishes,
     parsed.maxPrice,
-    parsed.category,
     origin,
     parsed.wantsCheap,
   );
   if (matched.length === 0) return [];
 
-  // resolveDishes đã lọc bán kính/giá/kind; quán gom từ id món khớp. Fetch summary + (origin)
-  // distanceM để rerank. Không lọc serves_* (item đã định hướng loại; serves_* nhiễu loại oan quán).
+  // resolveDishes đã lọc bán kính/giá; quán gom từ id món khớp. Fetch summary + (origin) distanceM
+  // để rerank.
   const ids = [...new Set(matched.map((d) => d.restaurantId))];
   const params: unknown[] = [ids];
   let distSel = "";
@@ -160,20 +159,12 @@ export async function candidatesNearbyOrTop(
   const params: unknown[] = [];
   const where = ["r.name IS NOT NULL"];
 
-  // Có maxPrice → lọc CỨNG quán có ≥1 món đúng kind ≤ giá (EXISTS); bỏ serves_* (item đã hàm ý
-  // loại + có menu). Quán không có dữ liệu menu/giá bị loại — chấp nhận (plan §3).
-  // Ko maxPrice → serves_* là gate cấp quán DUY NHẤT (phủ cả quán không menu).
+  // Có maxPrice → lọc CỨNG quán có ≥1 món ≤ giá (EXISTS). Quán không có dữ liệu menu/giá bị loại —
+  // chấp nhận (plan §3). Trục food/drink không còn lọc cứng ở đây (plan 09 — đã thành type-tag mềm).
   if (parsed.maxPrice != null) {
     const pI = params.push(parsed.maxPrice);
-    const kindCond =
-      parsed.category != null ? `AND mc.kind = $${params.push(parsed.category)}` : "";
     where.push(`EXISTS (SELECT 1 FROM menu_items mi
-                          JOIN menu_categories mc ON mc.id = mi.category_id
-                         WHERE mi.restaurant_id = r.id AND mi.price <= $${pI} ${kindCond})`);
-  } else if (parsed.category === "food") {
-    where.push("r.serves_food = true");
-  } else if (parsed.category === "drink") {
-    where.push("r.serves_drink = true");
+                         WHERE mi.restaurant_id = r.id AND mi.price <= $${pI})`);
   }
 
   // Có origin → lọc cứng bán kính + tính distanceM. Ko origin → top POOL_LIMIT theo rating.
@@ -199,10 +190,10 @@ export async function candidatesNearbyOrTop(
   if (candidates.length > 0) {
     if (parsed.maxPrice != null) {
       // Chip món ĐẮT NHẤT vẫn ≤ trần (rẻ-nhất hay là đồ phụ/nước chấm).
-      await attachChips(candidates, parsed.category, "priced", parsed.maxPrice);
+      await attachChips(candidates, "priced", parsed.maxPrice);
     } else if (parsed.wantsCheap) {
-      // Chip món RẺ NHẤT đúng kind + set cheapness để rerank ưu tiên quán rẻ.
-      await attachChips(candidates, parsed.category, "cheapest", null);
+      // Chip món RẺ NHẤT + set cheapness để rerank ưu tiên quán rẻ.
+      await attachChips(candidates, "cheapest", null);
     }
   }
   return candidates;
@@ -212,7 +203,6 @@ export async function candidatesNearbyOrTop(
 // món > 0đ, RẺ trước + set cheapness từ món rẻ nhất. 1 query gom hết quán, group trong JS.
 async function attachChips(
   candidates: Candidate[],
-  category: FoodCategory | null,
   mode: "priced" | "cheapest",
   maxPrice: number | null,
 ): Promise<void> {
@@ -221,11 +211,10 @@ async function attachChips(
   const conds = ["mi.price IS NOT NULL"];
   if (mode === "priced") conds.push(`mi.price <= $${params.push(maxPrice)}`);
   else conds.push("mi.price > 0");
-  if (category != null) conds.push(`mc.kind = $${params.push(category)}`);
 
   const rows = await query(
     `SELECT mi.restaurant_id, mi.name, mi.price
-       FROM menu_items mi JOIN menu_categories mc ON mc.id = mi.category_id
+       FROM menu_items mi
       WHERE mi.restaurant_id = ANY($1::bigint[]) AND ${conds.join(" AND ")}
       ORDER BY mi.price ${mode === "priced" ? "DESC" : "ASC"}`,
     params,

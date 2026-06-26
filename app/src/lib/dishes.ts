@@ -3,7 +3,7 @@ import { query } from "./db";
 // gần "bún bò" hơn "bún cua"; "gà rán" gần "gà nướng" hơn "gà chiên"). Lexical+synonym gánh chính.
 // import { embedMany, toVectorLiteral } from "./embed";
 import { expandSynonyms } from "./synonyms";
-import type { FoodCategory, LatLng, MatchedDish } from "./types";
+import type { LatLng, MatchedDish } from "./types";
 
 // Bước 4 (nhánh MÓN) — map mỗi tên món user hỏi về các menu_items khớp, để bước rank gom về quán.
 // Xem plans/01_4_dishes.md.
@@ -50,8 +50,6 @@ export const RADIUS_M = 1500;
 //
 // Lọc cứng NGAY trong SQL (không lọc sau — có LIMIT DISH_TOP_K, lọc sau sẽ đánh rơi món xếp > TOP_K):
 //  - maxPrice (yếu tố 5): mi.price <= maxPrice. price IS NULL bị loại khi có maxPrice, chấp nhận.
-//  - category (yếu tố 1): mc.kind = category (quyết định 01 §6.2). KHÔNG lọc kind thì tên khớp kéo
-//    cả topping/nước chấm trùng tên.
 //  - origin: ST_DWithin RADIUS_M trên cả KNN lẫn lexical. Lọc cứng bán kính NGAY trong query (không
 //    để rank cắt sau) — món phổ biến ("trà sữa") có hàng nghìn match toàn DB, cắt TOP_K trước rồi
 //    mới lọc geo sẽ đánh rơi cả vùng địa phương (Meiko bug), và quét toàn quốc cũng tốn. Quán
@@ -59,7 +57,6 @@ export const RADIUS_M = 1500;
 export async function resolveDishes(
   dishes: string[],
   maxPrice: number | null = null,
-  category: FoodCategory | null = null,
   origin: LatLng | null = null,
   wantsCheap: boolean = false,
 ): Promise<MatchedDish[]> {
@@ -133,11 +130,7 @@ export async function resolveDishes(
     const anyPlainto = vIdx.map(plainOf).join(" || ");
     const anyPhraseto = vIdx.map(phraseOf).join(" || ");
     const exactPhraseto = phraseOf(vIdx[0]); // variants[0] = tên gốc
-    // Lọc kind/price (một nhánh, tham chiếu $n trực tiếp).
-    const kindFilter =
-      category != null
-        ? `AND mi.category_id IN (SELECT id FROM menu_categories WHERE kind = $${params.push(category)})`
-        : "";
+    // Lọc price (tham chiếu $n trực tiếp).
     const priceFilter =
       maxPrice != null ? `AND mi.price <= $${params.push(maxPrice)}` : "";
     // ord quyết định MÓN nào sống sót khi cắt LIMIT DISH_TOP_K (món phổ biến match hàng nghìn dòng):
@@ -181,7 +174,6 @@ export async function resolveDishes(
            FROM menu_items mi
            ${join}
            WHERE mi.search_vec @@ (${anyPlainto})
-             ${kindFilter}
              ${priceFilter}
          ) u
        ) ranked
