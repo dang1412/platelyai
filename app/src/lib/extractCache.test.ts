@@ -9,7 +9,6 @@ import {
 import type { ParsedQuery } from "./types";
 
 const PQ = (dishes: string[] = []): ParsedQuery => ({
-  category: null,
   dishes,
   tags: [],
   location: null,
