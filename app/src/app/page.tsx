@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import AuthButton from "@/components/AuthButton";
+import SiteHeader from "@/components/SiteHeader";
 import SearchBar from "@/components/SearchBar";
 import RestaurantCard, { fmtVnd } from "@/components/RestaurantCard";
 import RestaurantModal from "@/components/RestaurantModal";
@@ -61,12 +60,18 @@ export default function Home() {
   };
   const closeRestaurant = () => {
     setSelectedId(null);
-    window.history.pushState(null, "", window.location.pathname);
+    window.history.pushState(null, "", "/");
   };
 
   // Đọc ?quan khi tải trang (mở thẳng từ link chia sẻ) + xử lý nút back/forward.
+  // Cũng nhận path /order/<id> (modal đặt món đẩy URL sang đó) để giữ modal mở.
   useEffect(() => {
     const sync = () => {
+      const orderMatch = window.location.pathname.match(/^\/order\/(\d+)/);
+      if (orderMatch) {
+        setSelectedId(Number(orderMatch[1]));
+        return;
+      }
       const raw = new URLSearchParams(window.location.search).get("quan");
       const id = raw ? Number(raw) : NaN;
       setSelectedId(Number.isInteger(id) ? id : null);
@@ -78,24 +83,7 @@ export default function Home() {
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-      <header className="relative mb-8 text-center">
-        <div className="absolute right-0 top-0">
-          <AuthButton />
-        </div>
-        <h1 className="flex justify-center">
-          <Image
-            src="/logo.png"
-            alt="platelyai"
-            width={713}
-            height={233}
-            priority
-            className="h-16 w-auto"
-          />
-        </h1>
-        <p className="mt-1 text-zinc-500 dark:text-zinc-400">
-          Tìm quán ăn ngon gần Vinhomes Ocean Park
-        </p>
-      </header>
+      <SiteHeader subtitle="Tìm quán ăn ngon gần Vinhomes Ocean Park" />
 
       <div className="mx-auto mb-8 max-w-2xl">
         <SearchBar value={query} onSearch={setQuery} />

@@ -3,11 +3,29 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Token cho UI đặt món (feature 11). Đặt tên theo vai trò, không theo màu. */
+  --surface: #ffffff; /* nền card/panel */
+  --surface-muted: #f4f4f5; /* nền phụ (zinc-100) */
+  --border: #e4e4e7; /* viền (zinc-200) */
+  --muted-foreground: #71717a; /* chữ phụ (zinc-500) */
+  --brand: #ea580c; /* nhấn hành động chính (orange-600) */
+  --brand-hover: #c2410c; /* orange-700 */
+  --brand-foreground: #ffffff; /* chữ trên nền brand */
+  --success: #16a34a; /* bước hoàn tất (green-600) */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,6 +34,15 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    --surface: #09090b; /* zinc-950 */
+    --surface-muted: #18181b; /* zinc-900 */
+    --border: #27272a; /* zinc-800 */
+    --muted-foreground: #a1a1aa; /* zinc-400 */
+    --brand: #ea580c; /* giữ cam, tương phản tốt trên nền tối */
+    --brand-hover: #f97316; /* orange-500 */
+    --brand-foreground: #ffffff;
+    --success: #22c55e; /* green-500 */
   }
 }
 
