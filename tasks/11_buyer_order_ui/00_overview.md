@@ -18,7 +18,7 @@ pickup `pending→accepted→ready→completed`; `cancelled`/`rejected`.
 - [x] [02_types_meta_mock.md](02_types_meta_mock.md) — `lib/orders/{types,statusMeta(+test),mock}.ts`
 - [x] [03_presentational.md](03_presentational.md) — Badge + Timeline + Summary + Card
 - [x] [04_order_form.md](04_order_form.md) — `OrderForm` + nút "Đặt món" trong `RestaurantModal`
-- [ ] [05_tracking_page.md](05_tracking_page.md) — `/orders/[id]` (+ tuỳ chọn `/orders`) nối mock + dev stepper
+- [x] [05_tracking_page.md](05_tracking_page.md) — `/orders/[id]` (+ tuỳ chọn `/orders`) nối mock + dev stepper
 - [ ] [06_finalize.md](06_finalize.md) — lint/test/build + preview light+dark + PR
 
 ## MUST nhắc lại (AGENTS)

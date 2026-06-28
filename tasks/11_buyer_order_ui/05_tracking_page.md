@@ -1,5 +1,9 @@
 # 05 — Trang theo dõi đơn /orders/[id] (+ tuỳ chọn danh sách)
 
+> Commit: `b804f3b` — feat(orders): trang theo dõi /orders/[id] + danh sách /orders (mock + dev stepper) ✅
+> Khung `page.tsx` server-first (await params + getMockOrder); tương tác ở client `OrderTracker`
+> (Huỷ/Đã nhận hàng/dev stepper, fallback đọc draft sessionStorage từ task 04). Đã làm cả `/orders`.
+
 ## Vì sao
 Màn hình buyer xem trạng thái đơn. Cần preview **mọi trạng thái** để tinh chỉnh timeline/nút —
 dùng dev stepper giả lập seller đẩy trạng thái (vì chưa có backend/SSE).
