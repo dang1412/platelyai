@@ -45,9 +45,25 @@ export default function AuthButton() {
       <button
         type="button"
         onClick={loginPopup}
-        className="rounded-full border border-zinc-300 px-4 py-1.5 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
+        aria-label="Đăng nhập"
+        title="Đăng nhập"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-zinc-300 transition hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-800"
       >
-        Đăng nhập
+        {/* icon user/đăng nhập cho gọn (mobile) */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-5 w-5"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+        </svg>
       </button>
     );
   }
@@ -59,7 +75,7 @@ export default function AuthButton() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-zinc-200 py-1 pl-1 pr-3 transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        className="flex items-center gap-2 rounded-full border border-zinc-200 p-1 transition hover:bg-zinc-100 sm:pr-3 dark:border-zinc-700 dark:hover:bg-zinc-800"
       >
         {user.image ? (
           <Image
@@ -74,41 +90,90 @@ export default function AuthButton() {
             {(user.name ?? user.email ?? "?").charAt(0).toUpperCase()}
           </span>
         )}
-        <span className="max-w-[8rem] truncate text-sm">{user.name ?? user.email}</span>
+        {/* Mobile: chỉ hiện avatar để khỏi đè lên logo ở header; tên hiện từ sm trở lên. */}
+        <span className="hidden max-w-[8rem] truncate text-sm sm:inline">
+          {user.name ?? user.email}
+        </span>
       </button>
 
-      {open && (
-        <>
-          {/* nền bấm ra ngoài để đóng menu */}
+      {/* Side menu trượt từ phải. Luôn mount để có hiệu ứng trượt; ẩn bằng translate. */}
+      <button
+        type="button"
+        aria-label="Đóng menu"
+        tabIndex={open ? 0 : -1}
+        onClick={() => setOpen(false)}
+        className={`fixed inset-0 z-40 cursor-default bg-black/40 transition-opacity ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+      />
+      <aside
+        className={`fixed right-0 top-0 z-50 flex h-full w-72 max-w-[80vw] flex-col border-l border-zinc-200 bg-white text-sm shadow-xl transition-transform dark:border-zinc-700 dark:bg-zinc-900 ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {/* Header: thông tin user + nút đóng */}
+        <div className="flex items-start gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
+          {user.image ? (
+            <Image
+              src={user.image}
+              alt={user.name ?? "avatar"}
+              width={40}
+              height={40}
+              className="rounded-full"
+            />
+          ) : (
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-300 text-sm font-medium dark:bg-zinc-600">
+              {(user.name ?? user.email ?? "?").charAt(0).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{user.name ?? user.email}</div>
+            <div className="truncate text-zinc-500 dark:text-zinc-400">{user.email}</div>
+          </div>
           <button
             type="button"
-            aria-label="Đóng menu"
-            className="fixed inset-0 z-10 cursor-default"
+            aria-label="Đóng"
             onClick={() => setOpen(false)}
-          />
-          <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white text-sm shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-            <div className="border-b border-zinc-100 px-4 py-2 text-zinc-500 dark:border-zinc-800">
-              {user.email}
-            </div>
-            {user.role === "admin" && (
-              <Link
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className="block px-4 py-2 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Trang quản trị
-              </Link>
-            )}
-            <button
-              type="button"
-              onClick={() => signOut()}
-              className="block w-full px-4 py-2 text-left text-red-600 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5"
+              aria-hidden="true"
             >
-              Đăng xuất
-            </button>
-          </div>
-        </>
-      )}
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex flex-1 flex-col py-2">
+          {user.role === "admin" && (
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
+              className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Trang quản trị
+            </Link>
+          )}
+        </nav>
+
+        {/* Đăng xuất ghim đáy */}
+        <button
+          type="button"
+          onClick={() => signOut()}
+          className="border-t border-zinc-100 px-4 py-3 text-left text-red-600 transition hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-800"
+        >
+          Đăng xuất
+        </button>
+      </aside>
     </div>
   );
 }
