@@ -1,5 +1,7 @@
 # 03 — Component presentational (badge, timeline, summary, card)
 
+> Commit: `a28e907` — feat(orders): component presentational badge/timeline/summary/card UI buyer ✅
+
 ## Vì sao
 Đây là phần để **tinh chỉnh** chính. Giữ component **thuần presentational** (nhận props, không
 fetch) để preview với mock và để plan 10 cắm dữ liệu thật không phải sửa.
