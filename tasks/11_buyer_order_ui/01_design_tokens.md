@@ -1,5 +1,7 @@
 # 01 — Semantic token cho UI đặt món
 
+> Commit: `a879e3b` — feat(orders): semantic token + types/statusMeta/mock cho UI buyer ✅
+
 ## Vì sao
 `globals.css` hiện chỉ có `--background`/`--foreground`; component cũ chép thẳng `bg-zinc-*`,
 `bg-orange-*`, `text-amber-*`. Màn hình mới cần token để tuân §5 (không palette literal) và để

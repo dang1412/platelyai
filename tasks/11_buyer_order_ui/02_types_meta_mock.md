@@ -1,5 +1,7 @@
 # 02 — Kiểu dùng chung + metadata trạng thái + mock
 
+> Commit: `a879e3b` — feat(orders): semantic token + types/statusMeta/mock cho UI buyer ✅
+
 ## Vì sao
 Component presentational cần **kiểu rõ ràng** và **metadata trạng thái** (nhãn VI, thứ tự bước)
 để render; trang cần **mock data** để chạy độc lập không backend. Tách `statusMeta` thuần ra để
