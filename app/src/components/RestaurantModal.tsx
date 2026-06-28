@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { mapUrl, type RestaurantDetail } from "@/lib/types";
+import { OrderForm, type OrderDraft } from "@/components/OrderForm";
 
 function formatPrice(price: number | null): string {
   if (price == null) return "Liên hệ";
@@ -23,6 +25,20 @@ export default function RestaurantModal({
   // Khởi tạo true vì component được remount (qua `key`) mỗi lần mở quán mới.
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [ordering, setOrdering] = useState(false);
+  const router = useRouter();
+
+  // Submit form đặt món (mock): cất draft vào sessionStorage rồi điều hướng trang theo dõi.
+  // TODO(plan 10): POST lên API, dùng id đơn thật do server trả về.
+  const submitOrder = (draft: OrderDraft) => {
+    const id = `mock-${Date.now()}`;
+    try {
+      sessionStorage.setItem(`order-draft:${id}`, JSON.stringify(draft));
+    } catch {
+      // sessionStorage bị chặn — bỏ qua, trang theo dõi sẽ fallback mock.
+    }
+    router.push(`/orders/${id}`);
+  };
 
   // Chia sẻ link quán: ưu tiên Web Share API (mobile), fallback copy clipboard.
   // URL hiện tại đã là dạng /?quan=<id> nhờ trang đồng bộ khi mở modal.
@@ -116,10 +132,31 @@ export default function RestaurantModal({
 
         {loading && !detail ? (
           <div className="p-5 text-zinc-500">Đang tải thông tin…</div>
+        ) : ordering && detail && r ? (
+          <div className="space-y-4 p-5">
+            <h3 className="text-lg font-semibold text-foreground">
+              Đặt món · {r.name}
+            </h3>
+            <OrderForm
+              restaurantName={r.name}
+              menu={detail.menu}
+              onSubmit={submitOrder}
+              onCancel={() => setOrdering(false)}
+            />
+          </div>
         ) : r ? (
           <div className="space-y-6 p-5">
             {/* Hành động */}
             <div className="flex flex-wrap gap-2">
+              {detail && detail.menu.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setOrdering(true)}
+                  className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition hover:bg-brand-hover"
+                >
+                  🍽️ Đặt món
+                </button>
+              )}
               {gmap && (
                 <a
                   href={gmap}
