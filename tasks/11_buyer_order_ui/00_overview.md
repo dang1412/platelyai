@@ -19,7 +19,7 @@ pickup `pending→accepted→ready→completed`; `cancelled`/`rejected`.
 - [x] [03_presentational.md](03_presentational.md) — Badge + Timeline + Summary + Card
 - [x] [04_order_form.md](04_order_form.md) — `OrderForm` + nút "Đặt món" trong `RestaurantModal`
 - [x] [05_tracking_page.md](05_tracking_page.md) — `/orders/[id]` (+ tuỳ chọn `/orders`) nối mock + dev stepper
-- [ ] [06_finalize.md](06_finalize.md) — lint/test/build + preview light+dark + PR
+- [x] [06_finalize.md](06_finalize.md) — lint/test/build + preview light+dark + PR
 
 ## MUST nhắc lại (AGENTS)
 - **Semantic token** ở màn hình mới — không `bg-zinc-*`/`text-gray-*`/hex mới (§5, agent rule #4).

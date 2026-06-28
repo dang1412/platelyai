@@ -1,5 +1,9 @@
 # 06 — Finalize: preview light/dark + lint/test/build + PR
 
+> Guardrails ✅: `pnpm lint && pnpm test (108) && pnpm build` xanh; audit không palette/hex, file lớn nhất
+> `OrderForm` 231 LOC (<300); `mock.ts`/dev stepper có ghi chú "tạm". Routes `/orders`, `/orders/[id]`,
+> `/orders/2002` smoke-test HTTP 200. Preview mắt thường light/dark: do người dùng chốt trên `pnpm dev`.
+
 ## Vì sao
 Chốt phần UI để có bản preview ổn cho việc tinh chỉnh và làm nền nối backend (plan 10).
 
