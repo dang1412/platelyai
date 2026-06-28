@@ -1,5 +1,9 @@
 # 04 — Form đặt món + nút "Đặt món" trong RestaurantModal
 
+> Commit: `18acf0f` — feat(orders): OrderForm + nút Đặt món trong RestaurantModal (mock submit) ✅
+> Mock submit cất `OrderDraft` vào `sessionStorage` key `order-draft:<id>` rồi `router.push(/orders/<id>)`;
+> trang theo dõi (task 05) đọc lại draft này. Plan 10 thay bằng POST API trả id thật.
+
 ## Vì sao
 Màn hình nhập liệu chính của buyer: chọn món, kiểu nhận hàng, địa chỉ/SDT. Cần tinh chỉnh UX
 (stepper số lượng, toggle delivery/pickup, định vị) trước khi nối API.
