@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { mapUrl, type RestaurantDetail } from "@/lib/types";
 import { OrderForm, type OrderDraft } from "@/components/OrderForm";
+import { useRouter } from "next/navigation";
 
 function formatPrice(price: number | null): string {
   if (price == null) return "Liên hệ";
@@ -28,7 +28,7 @@ export default function RestaurantModal({
   const [ordering, setOrdering] = useState(false);
   const router = useRouter();
 
-  // Submit form đặt món (mock): cất draft vào sessionStorage rồi điều hướng trang theo dõi.
+  // Submit form đặt món (mock): cất draft vào sessionStorage rồi sang trang theo dõi.
   // TODO(plan 10): POST lên API, dùng id đơn thật do server trả về.
   const submitOrder = (draft: OrderDraft) => {
     const id = `mock-${Date.now()}`;
@@ -38,6 +38,19 @@ export default function RestaurantModal({
       // sessionStorage bị chặn — bỏ qua, trang theo dõi sẽ fallback mock.
     }
     router.push(`/orders/${id}`);
+  };
+
+  // Mở form đặt món inline + đổi URL sang /order/<id> (deep-link; reload ra trang riêng thật).
+  const openOrder = () => {
+    if (restaurantId == null) return;
+    window.history.pushState(null, "", `/order/${restaurantId}`);
+    setOrdering(true);
+  };
+  // Trở lại menu quán: khôi phục URL ?quan=<id>.
+  const backToMenu = () => {
+    if (restaurantId == null) return;
+    window.history.pushState(null, "", `/?quan=${restaurantId}`);
+    setOrdering(false);
   };
 
   // Chia sẻ link quán: ưu tiên Web Share API (mobile), fallback copy clipboard.
@@ -88,6 +101,16 @@ export default function RestaurantModal({
     };
   }, [restaurantId]);
 
+  // Đồng bộ trạng thái đặt món với URL (/order/<id>) để nút back/forward hoạt động đúng.
+  useEffect(() => {
+    if (restaurantId == null) return;
+    const sync = () =>
+      setOrdering(window.location.pathname.startsWith("/order"));
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, [restaurantId]);
+
   if (restaurantId == null) return null;
 
   const r = detail?.restaurant;
@@ -134,12 +157,22 @@ export default function RestaurantModal({
           <div className="p-5 text-zinc-500">Đang tải thông tin…</div>
         ) : ordering && detail && r ? (
           <div className="space-y-4 p-5">
+            <button
+              type="button"
+              onClick={backToMenu}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              ← Trở lại menu quán
+            </button>
             <h3 className="text-lg font-semibold text-foreground">
               Đặt món · {r.name}
             </h3>
             <OrderForm
               restaurantName={r.name}
               menu={detail.menu}
+              restaurantCoords={
+                r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null
+              }
               onSubmit={submitOrder}
               onCancel={() => setOrdering(false)}
             />
@@ -151,7 +184,7 @@ export default function RestaurantModal({
               {detail && detail.menu.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setOrdering(true)}
+                  onClick={openOrder}
                   className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition hover:bg-brand-hover"
                 >
                   🍽️ Đặt món
