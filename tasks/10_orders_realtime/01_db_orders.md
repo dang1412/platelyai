@@ -1,5 +1,7 @@
 # 01 — DB: schema đơn hàng
 
+> Commit: 7bdab72 — feat(orders): schema đơn hàng (orders + order_items + order_events) ✅ (đã apply + test constraint trên DB dev)
+
 ## Vì sao
 Chưa có khái niệm đơn hàng trong DB. Cần 3 bảng: `orders` (đơn + trạng thái + thông tin
 giao/lấy), `order_items` (món đã đặt, **snapshot** tên+giá tại lúc đặt để đơn không đổi khi
