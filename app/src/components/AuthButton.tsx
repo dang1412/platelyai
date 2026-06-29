@@ -1,9 +1,61 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
+
+// Khung icon dùng chung trong side menu (24x24, stroke theo currentColor).
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5 shrink-0"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+// Một dòng link trong side menu: icon + nhãn.
+function NavLink({
+  href,
+  label,
+  icon,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      className="flex items-center gap-3 px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+    >
+      <span className="text-zinc-500 dark:text-zinc-400">{icon}</span>
+      {label}
+    </Link>
+  );
+}
+
+// Nhãn tiêu đề một nhóm trong side menu.
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="px-4 pb-1 pt-3 text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+      {children}
+    </p>
+  );
+}
 
 // Nút đăng nhập / avatar cho header. Dùng useSession (cần SessionProvider ở layout).
 export default function AuthButton() {
@@ -152,32 +204,54 @@ export default function AuthButton() {
           </button>
         </div>
 
-        {/* Nav */}
+        {/* Nav — tách 2 phần: khách đặt vs quản trị */}
         <nav className="flex flex-1 flex-col py-2">
-          <Link
+          {/* Phần khách đặt */}
+          <SectionLabel>Khách đặt</SectionLabel>
+          <NavLink
             href="/orders"
-            onClick={() => setOpen(false)}
-            className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            Đơn của tôi
-          </Link>
+            label="Đơn của tôi"
+            onNavigate={() => setOpen(false)}
+            icon={
+              <Icon>
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </Icon>
+            }
+          />
+
+          {/* Phần quản trị — chỉ chủ quán / admin */}
           {(user.role === "admin" || user.role === "owner") && (
-            <>
-              <Link
+            <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800">
+              <SectionLabel>Quản trị</SectionLabel>
+              <NavLink
                 href="/admin"
-                onClick={() => setOpen(false)}
-                className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Trang quản trị
-              </Link>
-              <Link
+                label="Trang quản trị"
+                onNavigate={() => setOpen(false)}
+                icon={
+                  <Icon>
+                    <rect x="3" y="3" width="7" height="9" rx="1" />
+                    <rect x="14" y="3" width="7" height="5" rx="1" />
+                    <rect x="14" y="12" width="7" height="9" rx="1" />
+                    <rect x="3" y="16" width="7" height="5" rx="1" />
+                  </Icon>
+                }
+              />
+              <NavLink
                 href="/admin/orders"
-                onClick={() => setOpen(false)}
-                className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                Quản lý đơn
-              </Link>
-            </>
+                label="Quản lý đơn"
+                onNavigate={() => setOpen(false)}
+                icon={
+                  <Icon>
+                    <rect x="8" y="2" width="8" height="4" rx="1" />
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <path d="M9 12h6" />
+                    <path d="M9 16h6" />
+                  </Icon>
+                }
+              />
+            </div>
           )}
         </nav>
 
