@@ -1,5 +1,7 @@
 # 02 — Mock data cho seller
 
+> Commit: 62b12f9 — feat(orders): mock thêm đơn pending/đa quán + simulateReject + restaurantNames ✅
+
 ## Vì sao
 Màn hình seller cần đủ đơn (nhiều quán, có đơn `pending`) để demo 3 cụm + bộ lọc quán, và một cách
 mô phỏng "từ chối" đối xứng với `simulateAdvance` đã có.
