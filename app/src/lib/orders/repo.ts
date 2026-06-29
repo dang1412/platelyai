@@ -2,10 +2,11 @@
 // Giá món LẤY TỪ DB khi tạo đơn (không tin client). pg_notify để bus (task 05) fan-out realtime.
 
 import { type QueryResultRow } from "pg";
-import { query, withTransaction, type TxQuery } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import { ValidationError } from "@/lib/adminValidate";
 import type { CurrentUser } from "@/lib/authz";
 import type { CreateOrderInput } from "@/lib/orderValidate";
+import { notifyOrder } from "@/lib/realtime/bus";
 import type { Fulfillment, Order, OrderStatus } from "./types";
 
 // Query bám pool hoặc transaction — cùng chữ ký nên dùng chung cho load.
@@ -174,14 +175,6 @@ export async function pendingCountForSeller(user: CurrentUser): Promise<number> 
     [user.id],
   );
   return Number(r.n);
-}
-
-// pg_notify mỏng để bus fan-out (task 05 thay bằng helper bus). Gọi TRONG transaction → chỉ phát khi COMMIT.
-async function notifyOrder(
-  q: TxQuery,
-  payload: { orderId: number; status: OrderStatus; buyerId: number; restaurantId: number },
-): Promise<void> {
-  await q(`SELECT pg_notify('order_channel', $1)`, [JSON.stringify(payload)]);
 }
 
 export async function createOrder(
