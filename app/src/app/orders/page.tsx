@@ -7,12 +7,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SiteHeader from "@/components/SiteHeader";
 import { OrderCard } from "@/components/OrderCard";
+import { useOrderStream } from "@/lib/useOrderStream";
 import { groupOrders } from "@/lib/orders/statusMeta";
 import type { Order } from "@/lib/orders/types";
 
 export default function OrdersHistoryPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[] | null>(null);
+
+  // Refetch toàn bộ danh sách (dùng ở mount + khi có event realtime).
+  const refetch = () => {
+    fetch("/api/orders")
+      .then((r) => (r.ok ? r.json() : { orders: [] }))
+      .then((d: { orders?: Order[] }) => setOrders(d.orders ?? []))
+      .catch(() => setOrders([]));
+  };
 
   useEffect(() => {
     let active = true;
@@ -24,6 +33,9 @@ export default function OrdersHistoryPage() {
       active = false;
     };
   }, []);
+
+  // Realtime: đơn nào của mình đổi trạng thái → refetch để cập nhật nhóm/badge.
+  useOrderStream(() => refetch());
 
   const open = (order: Order) => router.push(`/orders/${order.id}`);
   const groups = orders ? groupOrders(orders) : null;
