@@ -3,6 +3,7 @@
 
 import { getMockOrder } from "@/lib/orders/mock";
 import { OrderTracker } from "@/components/OrderTracker";
+import SiteHeader from "@/components/SiteHeader";
 
 export default async function OrderTrackingPage({
   params,
@@ -14,6 +15,7 @@ export default async function OrderTrackingPage({
 
   return (
     <main className="mx-auto max-w-lg px-5 py-8">
+      <SiteHeader />
       <OrderTracker id={id} initialOrder={order} />
     </main>
   );
