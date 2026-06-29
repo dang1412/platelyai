@@ -154,6 +154,13 @@ export default function AuthButton() {
 
         {/* Nav */}
         <nav className="flex flex-1 flex-col py-2">
+          <Link
+            href="/orders"
+            onClick={() => setOpen(false)}
+            className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Đơn của tôi
+          </Link>
           {user.role === "admin" && (
             <Link
               href="/admin"
