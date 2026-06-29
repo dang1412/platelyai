@@ -12,7 +12,7 @@ tác Nhận/Từ chối/Đẩy trạng thái). Mock-only — không DB/AI/route 
 ## Checklist (theo thứ tự phụ thuộc)
 - [x] [01_seller_logic.md](01_seller_logic.md) — `sellerActions.ts`: `groupSellerOrders`, `nextSellerStep`, `canReject` (+ test)
 - [x] [02_mock_data.md](02_mock_data.md) — mở rộng `mock.ts`: đơn pending/đa quán + `simulateReject` + lọc quán
-- [ ] [03_orders_list.md](03_orders_list.md) — `/admin/orders` nhóm trạng thái + lọc quán + `SellerOrderRow` + link từ `/admin`
+- [x] [03_orders_list.md](03_orders_list.md) — `/admin/orders` nhóm trạng thái + lọc quán + `SellerOrderRow` + link từ `/admin`
 - [ ] [04_order_detail.md](04_order_detail.md) — `/admin/orders/[id]` + `SellerActionPanel` (mock transitions)
 - [ ] [05_finalize.md](05_finalize.md) — lint/test/build + preview light+dark + PR
 

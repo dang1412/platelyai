@@ -1,5 +1,7 @@
 # 03 — Trang danh sách /admin/orders
 
+> Commit: b17e430 — feat(admin): trang /admin/orders nhóm trạng thái + lọc quán + link từ trang quản trị ✅
+
 ## Vì sao
 Seller cần một chỗ xem mọi đơn của quán mình, nhóm theo trạng thái để xử lý theo workflow.
 
