@@ -161,7 +161,7 @@ export default function AuthButton() {
           >
             Đơn của tôi
           </Link>
-          {user.role === "admin" && (
+          {(user.role === "admin" || user.role === "owner") && (
             <Link
               href="/admin"
               onClick={() => setOpen(false)}
