@@ -22,7 +22,7 @@ Seller dashboard **đã ở `/admin/orders`** (không phải `/seller/orders`).
 ## Checklist (theo thứ tự phụ thuộc)
 - [x] [01_db_orders.md](01_db_orders.md) — `db/init/11_orders.sql`: orders + order_items + order_events
 - [x] [02_state_machine.md](02_state_machine.md) — `lib/orders/state.ts` (+test) máy trạng thái thuần
-- [ ] [03_repo_authz_validate.md](03_repo_authz_validate.md) — repo.ts (+`toOrder`) + authz.ts + orderValidate.ts (+repo.test)
+- [x] [03_repo_authz_validate.md](03_repo_authz_validate.md) — repo.ts (+`toOrder`) + authz.ts + orderValidate.ts (+repo.test)
 - [ ] [04_api_orders.md](04_api_orders.md) — routes orders POST/GET, [id] GET, status PATCH, seller/orders GET
 - [ ] [05_realtime_bus.md](05_realtime_bus.md) — `lib/realtime/bus.ts` LISTEN/NOTIFY + nối pg_notify vào repo
 - [ ] [06_api_sse_hook.md](06_api_sse_hook.md) — `api/orders/stream` (SSE) + `lib/useOrderStream.ts`

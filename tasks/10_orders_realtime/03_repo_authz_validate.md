@@ -1,5 +1,8 @@
 # 03 — Repo SQL + authz đơn + validate input
 
+> Commit: fe65096 — feat(orders): repo SQL + authz + validate đơn hàng (+ integration test); thêm restaurantId ✅
+> Lưu ý: `repo.test.ts` không import `orders/authz` (kéo next-auth, vỡ dưới vitest); guard transition phủ ở `state.test`, `canViewOrder`/`assertCanAct` verify thủ công ở task 09.
+
 ## Vì sao
 Tách lớp dữ liệu (SQL) + phân quyền + validate khỏi route để route mỏng và test được DB thật.
 Đây là nơi enforce 2 MUST quan trọng: **tham số hoá SQL** và **lấy giá server-side** (không tin
