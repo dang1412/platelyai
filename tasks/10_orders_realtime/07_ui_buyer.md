@@ -1,5 +1,8 @@
 # 07 — Wiring buyer: đổi nguồn dữ liệu mock → API + realtime
 
+> Commit: 1656ac2 — feat(orders): wiring buyer — đặt món POST /api/orders, theo dõi + lịch sử dùng API + SSE ✅
+> Kèm: thêm `id` vào `MenuItem` + select `mi.id` ở `/api/restaurants/[id]` (cần `menuItemId` để đặt món); OrderTracker bỏ dev stepper/draft.
+
 ## Vì sao
 UI buyer đã có (feature 11/12): `OrderForm`, `OrderTracker`, `OrderStatusTimeline`, `OrderSummary`,
 `OrderCard`, trang `/orders` + `/orders/[id]`. Task này chỉ **đổi nguồn dữ liệu** sang API thật +
