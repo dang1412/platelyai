@@ -1,5 +1,29 @@
 import { describe, it, expect } from "vitest";
-import { timelineSteps, statusTone, flowFor } from "./statusMeta";
+import {
+  timelineSteps,
+  statusTone,
+  flowFor,
+  isActiveStatus,
+  groupOrders,
+} from "./statusMeta";
+import type { Order, OrderStatus } from "./types";
+
+// Tạo đơn tối thiểu cho test phân nhóm — chỉ cần status + createdAt.
+function order(id: string, status: OrderStatus, createdAt: string): Order {
+  return {
+    id,
+    restaurantName: "Quán test",
+    fulfillment: "delivery",
+    status,
+    items: [],
+    total: 0,
+    phone: "0900000000",
+    address: null,
+    note: null,
+    events: [],
+    createdAt,
+  };
+}
 
 describe("flowFor", () => {
   it("delivery có bước 'delivering' + 'arrived'; pickup có 'ready' thay thế", () => {
@@ -73,5 +97,48 @@ describe("statusTone", () => {
     expect(statusTone("completed")).toBe("success");
     expect(statusTone("cancelled")).toBe("muted");
     expect(statusTone("rejected")).toBe("muted");
+  });
+});
+
+describe("isActiveStatus", () => {
+  it("true cho trạng thái đang chạy, false cho trạng thái kết thúc", () => {
+    const active: OrderStatus[] = [
+      "pending",
+      "accepted",
+      "delivering",
+      "arrived",
+      "ready",
+    ];
+    const terminal: OrderStatus[] = ["completed", "rejected", "cancelled"];
+    for (const s of active) expect(isActiveStatus(s)).toBe(true);
+    for (const s of terminal) expect(isActiveStatus(s)).toBe(false);
+  });
+});
+
+describe("groupOrders", () => {
+  it("chia đúng nhóm active/history, mỗi nhóm mới nhất trước", () => {
+    const input = [
+      order("a1", "pending", "2026-06-01T00:00:00.000Z"),
+      order("h1", "completed", "2026-06-02T00:00:00.000Z"),
+      order("a2", "delivering", "2026-06-03T00:00:00.000Z"),
+      order("h2", "cancelled", "2026-06-04T00:00:00.000Z"),
+    ];
+    const { active, history } = groupOrders(input);
+    expect(active.map((o) => o.id)).toEqual(["a2", "a1"]); // desc theo createdAt
+    expect(history.map((o) => o.id)).toEqual(["h2", "h1"]);
+  });
+
+  it("mảng rỗng → hai nhóm rỗng", () => {
+    expect(groupOrders([])).toEqual({ active: [], history: [] });
+  });
+
+  it("không mutate mảng đầu vào", () => {
+    const input = [
+      order("a1", "pending", "2026-06-01T00:00:00.000Z"),
+      order("a2", "accepted", "2026-06-03T00:00:00.000Z"),
+    ];
+    const snapshot = input.map((o) => o.id);
+    groupOrders(input);
+    expect(input.map((o) => o.id)).toEqual(snapshot);
   });
 });

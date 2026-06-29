@@ -1,27 +1,56 @@
-// Danh sách đơn buyer (feature 11 — mock). Client để gắn onClick điều hướng; plan 10 nối API.
+// Trang lịch sử đơn buyer (feature 12 — mock). Tách 2 nhóm Đang xử lý / Lịch sử.
+// Client để gắn onClick điều hướng; plan 10 nối API thật (chỉ thay nguồn dữ liệu).
 
 "use client";
 
 import { useRouter } from "next/navigation";
+import SiteHeader from "@/components/SiteHeader";
 import { OrderCard } from "@/components/OrderCard";
 import { listMockOrders } from "@/lib/orders/mock";
+import { groupOrders } from "@/lib/orders/statusMeta";
+import type { Order } from "@/lib/orders/types";
 
-export default function OrdersListPage() {
+export default function OrdersHistoryPage() {
   const router = useRouter();
-  const orders = listMockOrders();
+  const { active, history } = groupOrders(listMockOrders());
+
+  const open = (order: Order) => router.push(`/orders/${order.id}`);
 
   return (
     <main className="mx-auto max-w-lg px-5 py-8">
-      <h1 className="mb-4 text-xl font-bold text-foreground">Đơn của tôi</h1>
-      <div className="flex flex-col gap-3">
-        {orders.map((order) => (
-          <OrderCard
-            key={order.id}
-            order={order}
-            onClick={() => router.push(`/orders/${order.id}`)}
-          />
-        ))}
-      </div>
+      <SiteHeader />
+      <h1 className="mb-6 text-xl font-bold text-foreground">Đơn của tôi</h1>
+
+      <Section title="Đang xử lý" orders={active} emptyText="Chưa có đơn đang xử lý." onOpen={open} />
+      <Section title="Lịch sử" orders={history} emptyText="Chưa có đơn nào." onOpen={open} />
     </main>
+  );
+}
+
+// Một nhóm đơn: tiêu đề + danh sách OrderCard, hoặc dòng rỗng nhẹ khi không có đơn.
+function Section({
+  title,
+  orders,
+  emptyText,
+  onOpen,
+}: {
+  title: string;
+  orders: Order[];
+  emptyText: string;
+  onOpen: (order: Order) => void;
+}) {
+  return (
+    <section className="mb-8 last:mb-0">
+      <h2 className="mb-3 text-sm font-semibold text-muted-foreground">{title}</h2>
+      {orders.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{emptyText}</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {orders.map((order) => (
+            <OrderCard key={order.id} order={order} onClick={() => onOpen(order)} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
