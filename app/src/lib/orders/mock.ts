@@ -23,6 +23,7 @@ const ITEMS_B: OrderItem[] = [
 function makeOrder(over: Partial<Order> & Pick<Order, "id">): Order {
   const items = over.items ?? ITEMS_A;
   return {
+    restaurantId: "0",
     restaurantName: "Quán Ăn Ngon",
     fulfillment: "delivery",
     status: "pending",

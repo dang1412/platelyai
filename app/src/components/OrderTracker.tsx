@@ -17,6 +17,7 @@ function draftToOrder(id: string, d: OrderDraft): Order {
   const now = new Date().toISOString();
   return {
     id,
+    restaurantId: "", // mock/draft (plan 10 wiring sẽ lấy đơn thật từ API có restaurantId)
     restaurantName: d.restaurantName,
     fulfillment: d.fulfillment,
     status: "pending",

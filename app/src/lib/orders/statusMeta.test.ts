@@ -12,6 +12,7 @@ import type { Order, OrderStatus } from "./types";
 function order(id: string, status: OrderStatus, createdAt: string): Order {
   return {
     id,
+    restaurantId: "1",
     restaurantName: "Quán test",
     fulfillment: "delivery",
     status,

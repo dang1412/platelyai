@@ -10,6 +10,7 @@ function order(
 ): Order {
   return {
     id,
+    restaurantId: "1",
     restaurantName: "Quán test",
     fulfillment,
     status,
