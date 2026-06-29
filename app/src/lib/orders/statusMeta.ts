@@ -1,7 +1,7 @@
 // Metadata trình bày cho trạng thái đơn (thuần, không React/DB) — nhãn VI + thứ tự bước timeline.
 // Logic chuyển trạng thái (transition hợp lệ + ai được phép) nằm ở plan 10 (state.ts), KHÔNG ở đây.
 
-import type { Fulfillment, OrderStatus } from "./types";
+import type { Fulfillment, Order, OrderStatus } from "./types";
 
 // Nhãn tiếng Việt cho mỗi trạng thái.
 export const STATUS_LABEL: Record<OrderStatus, string> = {
@@ -15,6 +15,13 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: "Đã huỷ",
 };
 
+// Trạng thái kết thúc (đơn không còn chạy): hoàn tất / từ chối / huỷ. Dùng chung cho tone + nhóm.
+const TERMINAL_STATUS: ReadonlySet<OrderStatus> = new Set([
+  "completed",
+  "rejected",
+  "cancelled",
+]);
+
 // Nhóm màu (ánh xạ token ở component): đang xử lý / hoàn tất / kết thúc tiêu cực.
 export type StatusTone = "active" | "success" | "muted";
 
@@ -22,6 +29,29 @@ export function statusTone(status: OrderStatus): StatusTone {
   if (status === "completed") return "success";
   if (status === "rejected" || status === "cancelled") return "muted";
   return "active";
+}
+
+// Đơn còn "đang xử lý" (chưa kết thúc) → xếp nhóm trên cùng ở trang lịch sử.
+export function isActiveStatus(status: OrderStatus): boolean {
+  return !TERMINAL_STATUS.has(status);
+}
+
+// Chia danh sách đơn thành 2 nhóm cho trang lịch sử, mỗi nhóm sắp xếp mới nhất trước.
+// Thuần — không mutate input.
+export function groupOrders(orders: Order[]): {
+  active: Order[];
+  history: Order[];
+} {
+  const byNewest = (a: Order, b: Order) =>
+    b.createdAt.localeCompare(a.createdAt);
+  return {
+    active: orders
+      .filter((o) => isActiveStatus(o.status))
+      .sort(byNewest),
+    history: orders
+      .filter((o) => !isActiveStatus(o.status))
+      .sort(byNewest),
+  };
 }
 
 // Chuỗi bước "hạnh phúc" theo cách nhận hàng (không gồm rejected/cancelled).
