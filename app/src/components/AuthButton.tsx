@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { listMockOrders } from "@/lib/orders/mock";
+import { groupSellerOrders } from "@/lib/orders/sellerActions";
 
 // Khung icon dùng chung trong side menu (24x24, stroke theo currentColor).
 function Icon({ children }: { children: ReactNode }) {
@@ -24,17 +26,19 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 
-// Một dòng link trong side menu: icon + nhãn.
+// Một dòng link trong side menu: icon + nhãn (+ badge số thông báo tuỳ chọn).
 function NavLink({
   href,
   label,
   icon,
   onNavigate,
+  badge,
 }: {
   href: string;
   label: string;
   icon: ReactNode;
   onNavigate: () => void;
+  badge?: number;
 }) {
   return (
     <Link
@@ -44,6 +48,11 @@ function NavLink({
     >
       <span className="text-zinc-500 dark:text-zinc-400">{icon}</span>
       {label}
+      {badge != null && badge > 0 && (
+        <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+          {badge}
+        </span>
+      )}
     </Link>
   );
 }
@@ -121,6 +130,12 @@ export default function AuthButton() {
   }
 
   const user = session.user;
+
+  // Số đơn cần xử lý (pending) cho badge "Quản lý đơn" — mock; plan 10 thay bằng đếm thật + realtime.
+  const isStaff = user.role === "admin" || user.role === "owner";
+  const pendingCount = isStaff
+    ? groupSellerOrders(listMockOrders()).needsAction.length
+    : 0;
 
   return (
     <div className="relative">
@@ -222,7 +237,7 @@ export default function AuthButton() {
           />
 
           {/* Phần quản trị — chỉ chủ quán / admin */}
-          {(user.role === "admin" || user.role === "owner") && (
+          {isStaff && (
             <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800">
               <SectionLabel>Quản trị</SectionLabel>
               <NavLink
@@ -242,6 +257,7 @@ export default function AuthButton() {
                 href="/admin/orders"
                 label="Quản lý đơn"
                 onNavigate={() => setOpen(false)}
+                badge={pendingCount}
                 icon={
                   <Icon>
                     <rect x="8" y="2" width="8" height="4" rx="1" />
