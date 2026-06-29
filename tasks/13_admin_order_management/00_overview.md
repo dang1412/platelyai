@@ -14,7 +14,7 @@ tác Nhận/Từ chối/Đẩy trạng thái). Mock-only — không DB/AI/route 
 - [x] [02_mock_data.md](02_mock_data.md) — mở rộng `mock.ts`: đơn pending/đa quán + `simulateReject` + lọc quán
 - [x] [03_orders_list.md](03_orders_list.md) — `/admin/orders` nhóm trạng thái + lọc quán + `SellerOrderRow` + link từ `/admin`
 - [x] [04_order_detail.md](04_order_detail.md) — `/admin/orders/[id]` + `SellerActionPanel` (mock transitions)
-- [ ] [05_finalize.md](05_finalize.md) — lint/test/build + preview light+dark + PR
+- [x] [05_finalize.md](05_finalize.md) — lint/test/build + preview light+dark + PR
 
 ## MUST nhắc lại (AGENTS)
 - **Validate at the edge:** parse/validate `searchParams.restaurant` và `params.id` trước khi dùng.

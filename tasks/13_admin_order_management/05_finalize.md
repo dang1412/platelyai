@@ -1,5 +1,7 @@
 # 05 — Finalize (lint/test/build + PR)
 
+> lint sạch · test 122 passed · build OK (/admin/orders + /admin/orders/[id] dynamic) ✅ — PR: chờ xác nhận user.
+
 ## Vì sao
 Chốt feature, đảm bảo xanh trước khi mở PR (AGENTS §7).
 
