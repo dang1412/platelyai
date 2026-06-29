@@ -23,8 +23,17 @@ export function useOrderStream(
   });
 
   useEffect(() => {
+    // Lần connect ĐẦU bỏ qua (caller đã tự load khi mount); chỉ refetch ở các lần RECONNECT sau
+    // để bù event lỡ — tránh fetch trùng ngay khi mở trang.
+    let firstOpen = true;
     const es = new EventSource("/api/orders/stream");
-    es.onopen = () => cb.current();
+    es.onopen = () => {
+      if (firstOpen) {
+        firstOpen = false;
+        return;
+      }
+      cb.current();
+    };
     es.onmessage = (e) => {
       try {
         cb.current(JSON.parse(e.data) as OrderStreamEvent);
