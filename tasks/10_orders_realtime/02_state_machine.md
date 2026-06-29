@@ -1,5 +1,7 @@
 # 02 — Máy trạng thái đơn (logic thuần)
 
+> Commit: f110fe9 — feat(orders): máy trạng thái đơn — canTransition + nextStatusesFor + allowedActors (+ test) ✅
+
 ## Vì sao
 Quy tắc chuyển trạng thái + ai được phép chuyển (buyer/seller) là logic dễ sai và cần test kỹ.
 Tách thành hàm **thuần, không chạm DB** để unit test không cần Postgres (§6) và để route/repo
