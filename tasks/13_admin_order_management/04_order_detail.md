@@ -1,5 +1,7 @@
 # 04 — Trang chi tiết /admin/orders/[id] + thao tác
 
+> Commit: f03ca77 — feat(admin): chi tiết đơn /admin/orders/[id] + panel thao tác seller (mock) ✅
+
 ## Vì sao
 Seller cần xem đầy đủ 1 đơn và thực hiện thao tác (nhận/từ chối/đẩy trạng thái) — mô phỏng bằng mock.
 
