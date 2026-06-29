@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { listMockOrders } from "@/lib/orders/mock";
-import { groupSellerOrders } from "@/lib/orders/sellerActions";
 
 // Khung icon dùng chung trong side menu (24x24, stroke theo currentColor).
 function Icon({ children }: { children: ReactNode }) {
@@ -97,6 +95,22 @@ export default function AuthButton() {
     if (!popup) signIn("google");
   }, []);
 
+  // Badge số đơn cần xử lý (pending) cho link "Quản lý đơn" — đếm thật từ API (chỉ owner/admin).
+  const isStaff =
+    session?.user?.role === "admin" || session?.user?.role === "owner";
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    if (!isStaff) return;
+    let active = true;
+    fetch("/api/seller/orders?count=pending")
+      .then((r) => (r.ok ? r.json() : { pendingCount: 0 }))
+      .then((d: { pendingCount?: number }) => active && setPendingCount(d.pendingCount ?? 0))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isStaff]);
+
   if (status === "loading") {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />;
   }
@@ -130,12 +144,6 @@ export default function AuthButton() {
   }
 
   const user = session.user;
-
-  // Số đơn cần xử lý (pending) cho badge "Quản lý đơn" — mock; plan 10 thay bằng đếm thật + realtime.
-  const isStaff = user.role === "admin" || user.role === "owner";
-  const pendingCount = isStaff
-    ? groupSellerOrders(listMockOrders()).needsAction.length
-    : 0;
 
   return (
     <div className="relative">
