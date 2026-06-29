@@ -39,6 +39,7 @@ export async function GET(
   const menuRows = await query(
     `SELECT mc.id           AS "categoryId",
             mc.category_name AS "categoryName",
+            mi.id            AS "itemId",
             mi.name          AS "itemName",
             mi.price,
             mi.description
@@ -59,6 +60,7 @@ export async function GET(
       byCategory.set(key, cat);
     }
     cat.items.push({
+      id: Number(r.itemId),
       name: r.itemName as string,
       price: r.price != null ? Number(r.price) : null,
       description: (r.description as string | null) ?? null,

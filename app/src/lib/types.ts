@@ -50,6 +50,7 @@ export type SearchResponse = {
 
 // Một món trong thực đơn modal chi tiết.
 export type MenuItem = {
+  id: number; // menu_items.id — cần để đặt món (plan 10)
   name: string;
   price: number | null;
   description: string | null;
