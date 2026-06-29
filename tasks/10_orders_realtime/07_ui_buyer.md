@@ -1,25 +1,26 @@
-# 07 — UI buyer: form đặt món + trang theo dõi
+# 07 — Wiring buyer: đổi nguồn dữ liệu mock → API + realtime
 
 ## Vì sao
-Buyer cần đặt món (chọn giao hàng/lấy tại quầy, SDT) và theo dõi trạng thái realtime.
+UI buyer đã có (feature 11/12): `OrderForm`, `OrderTracker`, `OrderStatusTimeline`, `OrderSummary`,
+`OrderCard`, trang `/orders` + `/orders/[id]`. Task này chỉ **đổi nguồn dữ liệu** sang API thật +
+realtime, **không sửa presentational component**.
 
 ## Việc
-- Component dùng chung (server-first, `"use client"` chỉ khi cần; **semantic token**, light+dark, §5):
-  - `app/src/components/OrderStatusTimeline.tsx` — render chuỗi `order_events` theo fulfillment
-    (delivery vs pickup hiện bước khác nhau), highlight bước hiện tại.
-  - `app/src/components/OrderCard.tsx` — tóm tắt 1 đơn (món, tổng tiền, trạng thái) dùng lại cho seller.
-- **Form đặt món** (`"use client"`): nút "Đặt món" trên `RestaurantModal`/trang quán → mở form:
-  - chọn món + số lượng (từ menu quán), chọn `fulfillment_type` (delivery/pickup).
-  - delivery → nhập/định vị địa chỉ (tái dùng hook `useGeolocation` sẵn có) + SDT; pickup → chỉ SDT.
-  - submit → `POST /api/orders` → điều hướng `/orders/[id]`.
-- **Trang theo dõi** `app/src/app/orders/[id]/page.tsx`:
-  - fetch `GET /api/orders/[id]`; dùng `useOrderStream` (task 06): khi nhận event của đơn này → refetch.
-  - hiện `OrderStatusTimeline` + thông tin đơn; badge nổi bật khi `arrived` ("Shipper đã tới — ra
-    nhận hàng") hoặc `ready` ("Món đã sẵn sàng — tới quầy lấy"); nút **Huỷ** khi `pending`/`accepted`
-    (PATCH `cancelled`); khi `arrived`/`ready` → nút **Đã nhận hàng** (PATCH `completed`).
+- **`OrderForm` (đặt món):** thay submit mock (sessionStorage draft) bằng `POST /api/orders` với
+  `{restaurantId, fulfillment, items:[{menuItemId,quantity}], phone, address?, lat?, lng?, note?}` →
+  nhận `{id}` → điều hướng `/orders/[id]`. Bỏ đường ghi draft.
+- **`/orders/[id]/page.tsx` + `OrderTracker`:**
+  - page fetch `GET /api/orders/[id]` (server) truyền `Order` xuống `OrderTracker`.
+  - `OrderTracker`: **bỏ dev stepper + `simulateAdvance`/`draftToOrder`**; dùng `useOrderStream`
+    (task 06) — nhận event của đơn này → refetch `GET /api/orders/[id]`.
+  - nút **Huỷ** (`pending`/`accepted`) và **Đã nhận hàng** (`arrived`/`ready`) gọi
+    `PATCH /api/orders/[id]/status`; ẩn/hiện theo `canTransition` + `allowedActors` (state.ts).
+- **`/orders/page.tsx` (lịch sử):** thay `listMockOrders()` bằng `GET /api/orders` (đơn của buyer);
+  vẫn `groupOrders`. Giữ `OrderCard`.
 
 ## Done khi
-- Đặt được đơn cả 2 kiểu (delivery cần địa chỉ, pickup không) → nhảy sang trang theo dõi.
-- Trang theo dõi đổi trạng thái **không reload** khi seller advance (qua SSE).
+- Đặt được đơn cả 2 kiểu (delivery cần địa chỉ, pickup không) → nhảy sang trang theo dõi đơn thật.
+- Trang theo dõi đổi trạng thái **không reload** khi seller advance (qua SSE); reconnect → đúng trạng thái.
 - Huỷ / Đã nhận hàng hoạt động đúng theo state machine (nút chỉ hiện khi hợp lệ).
-- Chạy được light + dark; không dùng hex/`zinc`/`gray` literal.
+- `/orders` hiển thị đơn thật của buyer; không còn import từ `lib/orders/mock`.
+- `pnpm lint` xanh; UI giữ nguyên (light + dark vẫn ổn).

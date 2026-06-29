@@ -1,24 +1,25 @@
-# 08 — UI seller: dashboard đơn hàng
+# 08 — Wiring seller: `/admin/orders` dùng API + realtime; gỡ mock
 
 ## Vì sao
-Seller (`role='owner'`) cần thấy đơn mới đến realtime và đẩy trạng thái qua các bước.
+UI seller đã có (feature 13): `/admin/orders` (nhóm trạng thái + lọc quán), `/admin/orders/[id]`,
+`SellerOrderRow`, `SellerActionPanel`, badge số đơn pending ở side menu. Task này **đổi nguồn dữ liệu**
+sang API thật + realtime và **xoá `lib/orders/mock.ts`**.
 
 ## Việc
-- `app/src/app/seller/orders/page.tsx` (`"use client"` phần cần stream):
-  - fetch `GET /api/orders` (server trả đơn của các quán user sở hữu — `listActiveOrdersForSeller`).
-  - dùng `useOrderStream` (task 06): nhận event → refetch danh sách (đơn `pending` mới hiện ngay,
-    có thể kèm chuông/badge đếm).
-  - mỗi đơn dùng `OrderCard` + nút **advance** theo state machine (`nextStatusesFor`):
-    - `pending` → **Chấp nhận** / **Từ chối**
-    - `accepted` → **Bắt đầu giao** (delivery) / **Sẵn sàng lấy** (pickup)
-    - `delivering` → **Đã tới**
-    - nút gọi `PATCH /api/orders/[id]/status`.
-  - phân nhóm: đơn đang hoạt động vs đã xong (completed/rejected/cancelled).
-- Bảo vệ trang: chỉ `role` `owner`/`admin` vào được (redirect/empty nếu `user`).
-- UI: **semantic token**, light + dark; bám style trang `/admin` hiện có.
+- **`/admin/orders/page.tsx`:** thay `listMockOrders()` bằng `GET /api/seller/orders` (đơn của quán
+  seller `canEdit`); dropdown lọc lấy danh sách quán seller sở hữu (thay `restaurantNames(mock)`).
+  Vẫn `groupSellerOrders`. Dùng `useOrderStream` để refetch khi có đơn mới/đổi trạng thái.
+- **`/admin/orders/[id]/page.tsx` + `SellerActionPanel`:** page fetch `GET /api/orders/[id]`; panel
+  thay `simulateAdvance`/`simulateReject` bằng `PATCH /api/orders/[id]/status` (nút theo
+  `nextSellerStep`/`canReject` — bám `state.ts`). `useOrderStream` để đồng bộ realtime.
+- **Badge side menu (`AuthButton`):** thay đếm `groupSellerOrders(listMockOrders())` bằng số thật từ
+  `GET /api/seller/orders?status=pending` (count); cập nhật khi có event (nhẹ — fetch lại khi mở menu
+  hoặc qua stream nếu sẵn).
+- **Gỡ mock:** xoá `app/src/lib/orders/mock.ts`; bảo đảm **không còn import** `mock` ở bất kỳ đâu
+  (`grep`); `simulateAdvance`/`simulateReject`/`listMockOrders`/`getMockOrder`/`restaurantNames` biến mất.
 
 ## Done khi
-- Seller mở dashboard thấy đơn của quán mình; đơn buyer vừa đặt **hiện ra không reload**.
-- Bấm advance đổi trạng thái và buyer thấy ngay (kiểm cùng task 09 verify 2 cửa sổ).
-- Nút chỉ hiện trạng thái hợp lệ kế tiếp theo fulfillment; user thường không vào được.
-- `pnpm lint` xanh; chạy light + dark.
+- Seller mở `/admin/orders` thấy đơn thật của quán mình; đơn buyer vừa đặt **hiện ra không reload**.
+- Bấm Nhận/Từ chối/đẩy trạng thái → buyer thấy ngay; lọc theo quán đúng.
+- Badge side menu hiển thị số đơn pending thật.
+- `grep -r "orders/mock"` không còn kết quả; `pnpm lint` xanh; UI giữ nguyên (light + dark).
