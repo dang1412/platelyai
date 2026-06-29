@@ -27,7 +27,7 @@ Seller dashboard **đã ở `/admin/orders`** (không phải `/seller/orders`).
 - [x] [05_realtime_bus.md](05_realtime_bus.md) — `lib/realtime/bus.ts` LISTEN/NOTIFY + nối pg_notify vào repo
 - [x] [06_api_sse_hook.md](06_api_sse_hook.md) — `api/orders/stream` (SSE) + `lib/useOrderStream.ts`
 - [x] [07_ui_buyer.md](07_ui_buyer.md) — **wiring buyer**: OrderForm→POST, `/orders` + `/orders/[id]` dùng API + stream
-- [ ] [08_ui_seller.md](08_ui_seller.md) — **wiring seller**: `/admin/orders` + panel + badge dùng API; gỡ mock
+- [x] [08_ui_seller.md](08_ui_seller.md) — **wiring seller**: `/admin/orders` + panel + badge dùng API; gỡ mock
 - [ ] [09_finalize.md](09_finalize.md) — verify realtime 2 cửa sổ + lint/test/build + PR
 
 ## MUST nhắc lại (AGENTS)

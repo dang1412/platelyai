@@ -1,5 +1,8 @@
 # 08 — Wiring seller: `/admin/orders` dùng API + realtime; gỡ mock
 
+> Commit: fe1f7c8 — feat(orders): wiring seller — /admin/orders + panel + badge dùng API/SSE; xoá mock ✅
+> `/admin/orders` server component đọc repo trực tiếp + `SellerOrdersRefresher` (SSE → router.refresh); badge fetch `?count=pending`; `lib/orders/mock.ts` đã xoá (grep sạch).
+
 ## Vì sao
 UI seller đã có (feature 13): `/admin/orders` (nhóm trạng thái + lọc quán), `/admin/orders/[id]`,
 `SellerOrderRow`, `SellerActionPanel`, badge số đơn pending ở side menu. Task này **đổi nguồn dữ liệu**
