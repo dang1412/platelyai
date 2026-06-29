@@ -1,5 +1,8 @@
 # 02 — Nâng cấp trang /orders thành 2 nhóm
 
+> Commit: b437043 — feat(orders): thêm header chung SiteHeader cho /orders/[id] ✅
+> Commit: 77f14c5 — feat(orders): trang lịch sử đơn tách nhóm Đang xử lý / Lịch sử + header chung ✅
+
 ## Vì sao
 `/orders` hiện liệt kê phẳng mọi đơn. Trang lịch sử cần tách **Đang xử lý** / **Lịch sử** để giống
 app giao đồ ăn thật.
