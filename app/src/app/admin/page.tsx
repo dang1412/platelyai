@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { signOut } from "@/auth";
 import { getCurrentUser, listEditableRestaurants } from "@/lib/authz";
 
 // Danh sách quán quản lý + ô search lọc tên (server-side, không cần client state).
@@ -15,42 +14,34 @@ export default async function AdminPage({
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Quản lý quán</h1>
-          <p className="text-sm text-black/60">
-            {user.name ?? user.email}
-            {user.role === "admin" && (
-              <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
-                admin · tất cả quán
-              </span>
-            )}
-          </p>
-        </div>
-
-        <form
-          action={async () => {
-            "use server";
-            await signOut({ redirectTo: "/login" });
-          }}
-        >
-          <button
-            type="submit"
-            className="rounded-lg border border-black/15 px-4 py-2 text-sm transition hover:bg-black/5"
-          >
-            Đăng xuất
-          </button>
-        </form>
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold">Quản lý quán</h1>
+        <p className="text-sm text-black/60">
+          {user.name ?? user.email}
+          {user.role === "admin" && (
+            <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
+              admin · tất cả quán
+            </span>
+          )}
+        </p>
       </header>
 
-      {user.role === "admin" && (
+      <div className="mb-4 flex flex-wrap gap-2">
         <Link
-          href="/admin/restaurants/new"
-          className="mb-4 self-start rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/85"
+          href="/admin/orders"
+          className="self-start rounded-lg border border-black/15 px-4 py-2 text-sm font-medium transition hover:bg-black/5"
         >
-          + Tạo quán
+          Quản lý đơn
         </Link>
-      )}
+        {user.role === "admin" && (
+          <Link
+            href="/admin/restaurants/new"
+            className="self-start rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/85"
+          >
+            + Tạo quán
+          </Link>
+        )}
+      </div>
 
       <form method="get" className="mb-4 flex gap-2">
         <input

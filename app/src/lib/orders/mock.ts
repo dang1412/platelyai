@@ -61,6 +61,25 @@ const MOCK_ORDERS: Order[] = [
     restaurantName: "Cà Phê Góc Phố",
     items: ITEMS_B,
   }),
+  // Thêm đơn pending/đa quán để dashboard seller có dữ liệu ở cả 3 cụm + lọc theo quán.
+  makeOrder({ id: "1007", status: "pending", phone: "0912000111" }),
+  makeOrder({
+    id: "2003",
+    fulfillment: "pickup",
+    status: "pending",
+    address: null,
+    restaurantName: "Cà Phê Góc Phố",
+    items: ITEMS_B,
+    phone: "0912000222",
+  }),
+  makeOrder({
+    id: "2004",
+    fulfillment: "pickup",
+    status: "rejected",
+    address: null,
+    restaurantName: "Cà Phê Góc Phố",
+    items: ITEMS_B,
+  }),
 ];
 
 export function listMockOrders(): Order[] {
@@ -69,6 +88,11 @@ export function listMockOrders(): Order[] {
 
 export function getMockOrder(id: string): Order | null {
   return MOCK_ORDERS.find((o) => o.id === id) ?? null;
+}
+
+// Danh sách quán distinct (cho dropdown lọc ở dashboard seller).
+export function restaurantNames(orders: Order[]): string[] {
+  return [...new Set(orders.map((o) => o.restaurantName))];
 }
 
 // Đẩy đơn sang trạng thái kế tiếp theo flow nhận hàng (cho dev stepper preview).
@@ -82,5 +106,17 @@ export function simulateAdvance(order: Order): Order {
     ...order,
     status: next,
     events: [...order.events, { status: next, at: new Date().toISOString() }],
+  };
+}
+
+// Seller từ chối đơn (mock) — đặt 'rejected' + append event. Không mutate input.
+export function simulateReject(order: Order): Order {
+  return {
+    ...order,
+    status: "rejected",
+    events: [
+      ...order.events,
+      { status: "rejected", at: new Date().toISOString() },
+    ],
   };
 }

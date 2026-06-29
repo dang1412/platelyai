@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import SiteHeader from "@/components/SiteHeader";
 
 // Guard cho toàn bộ /admin. Chạy ở Node runtime (server component) nên dùng pg được.
 // Chưa đăng nhập -> /login. Vào được nếu role ∈ {admin, owner}; user thường -> báo thiếu quyền.
@@ -26,5 +27,13 @@ export default async function AdminLayout({
     );
   }
 
-  return <>{children}</>;
+  // Header chung cho toàn khu admin (logo + menu user). Mỗi page tự render <main> bên dưới.
+  return (
+    <>
+      <div className="mx-auto w-full max-w-3xl px-6 pt-6">
+        <SiteHeader />
+      </div>
+      {children}
+    </>
+  );
 }
