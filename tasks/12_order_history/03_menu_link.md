@@ -1,5 +1,7 @@
 # 03 — Link "Đơn của tôi" trong side menu
 
+> Commit: d9137e6 — feat(auth): thêm link 'Đơn của tôi' vào side menu khi đã đăng nhập ✅
+
 ## Vì sao
 User cần lối vào trang lịch sử từ side menu, chỉ khi đã đăng nhập.
 

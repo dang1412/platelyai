@@ -12,7 +12,7 @@ nhóm **Đang xử lý** / **Lịch sử**, và thêm link **"Đơn của tôi"*
 ## Checklist (theo thứ tự phụ thuộc)
 - [x] [01_group_logic.md](01_group_logic.md) — `isActiveStatus` + `groupOrders` trong `statusMeta.ts` (+ test)
 - [x] [02_orders_page.md](02_orders_page.md) — nâng cấp `/orders` thành 2 nhóm + empty state
-- [ ] [03_menu_link.md](03_menu_link.md) — link "Đơn của tôi" trong side menu `AuthButton`
+- [x] [03_menu_link.md](03_menu_link.md) — link "Đơn của tôi" trong side menu `AuthButton`
 - [ ] [04_finalize.md](04_finalize.md) — lint/test/build + preview light+dark + PR
 
 ## MUST nhắc lại (AGENTS)
