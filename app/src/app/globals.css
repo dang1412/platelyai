@@ -13,6 +13,7 @@
   --brand-hover: #c2410c; /* orange-700 */
   --brand-foreground: #ffffff; /* chữ trên nền brand */
   --success: #16a34a; /* bước hoàn tất (green-600) */
+  --danger: #dc2626; /* cảnh báo/cần xử lý (red-600) */
 }
 
 @theme inline {
@@ -26,6 +27,7 @@
   --color-brand-hover: var(--brand-hover);
   --color-brand-foreground: var(--brand-foreground);
   --color-success: var(--success);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -43,6 +45,7 @@
     --brand-hover: #f97316; /* orange-500 */
     --brand-foreground: #ffffff;
     --success: #22c55e; /* green-500 */
+    --danger: #ef4444; /* red-500 */
   }
 }
 

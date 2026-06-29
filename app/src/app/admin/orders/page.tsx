@@ -54,7 +54,7 @@ export default async function AdminOrdersPage({
         </button>
       </form>
 
-      <Section title="Cần xử lý" orders={needsAction} emptyText="Không có đơn chờ xác nhận." />
+      <Section title="Cần xử lý" orders={needsAction} emptyText="Không có đơn chờ xác nhận." urgent />
       <Section title="Đang làm" orders={inProgress} emptyText="Không có đơn đang xử lý." />
       <Section title="Hoàn tất · Huỷ" orders={done} emptyText="Chưa có đơn kết thúc." />
     </main>
@@ -65,18 +65,25 @@ function Section({
   title,
   orders,
   emptyText,
+  urgent = false,
 }: {
   title: string;
   orders: Order[];
   emptyText: string;
+  urgent?: boolean;
 }) {
   return (
     <section className="mb-8 last:mb-0">
-      <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
         {title}
-        {orders.length > 0 && (
-          <span className="ml-1.5 text-muted-foreground">({orders.length})</span>
-        )}
+        {orders.length > 0 &&
+          (urgent ? (
+            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-xs font-medium text-brand-foreground">
+              {orders.length}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">({orders.length})</span>
+          ))}
       </h2>
       {orders.length === 0 ? (
         <p className="text-sm text-muted-foreground">{emptyText}</p>
