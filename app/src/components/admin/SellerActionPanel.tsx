@@ -22,8 +22,14 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
       .then((d: { order: Order } | null) => d && setOrder(d.order))
       .catch(() => {});
   };
+  // Patch status từ payload (0 request); reconnect (payload rỗng) → full refetch bù lỡ.
   useOrderStream((payload) => {
-    if (!payload || String(payload.orderId) === id) refetch();
+    if (!payload) {
+      refetch();
+      return;
+    }
+    if (String(payload.orderId) !== id) return;
+    setOrder((prev) => (prev ? { ...prev, status: payload.status as OrderStatus } : prev));
   });
 
   const act = async (toStatus: OrderStatus) => {

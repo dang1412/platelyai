@@ -47,9 +47,14 @@ export function OrderTracker({ id }: { id: string }) {
     };
   }, [id]);
 
-  // Realtime: refetch khi có event của đơn này (hoặc khi (re)connect → bù lỡ).
+  // Realtime: patch status từ payload (0 request); reconnect (payload rỗng) → full refetch bù lỡ.
   useOrderStream((payload) => {
-    if (!payload || String(payload.orderId) === id) refetch();
+    if (!payload) {
+      refetch();
+      return;
+    }
+    if (String(payload.orderId) !== id) return;
+    setOrder((prev) => (prev ? { ...prev, status: payload.status as OrderStatus } : prev));
   });
 
   const patch = async (toStatus: OrderStatus) => {
