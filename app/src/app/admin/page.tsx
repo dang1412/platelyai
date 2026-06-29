@@ -43,14 +43,22 @@ export default async function AdminPage({
         </form>
       </header>
 
-      {user.role === "admin" && (
+      <div className="mb-4 flex flex-wrap gap-2">
         <Link
-          href="/admin/restaurants/new"
-          className="mb-4 self-start rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/85"
+          href="/admin/orders"
+          className="self-start rounded-lg border border-black/15 px-4 py-2 text-sm font-medium transition hover:bg-black/5"
         >
-          + Tạo quán
+          Quản lý đơn
         </Link>
-      )}
+        {user.role === "admin" && (
+          <Link
+            href="/admin/restaurants/new"
+            className="self-start rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/85"
+          >
+            + Tạo quán
+          </Link>
+        )}
+      </div>
 
       <form method="get" className="mb-4 flex gap-2">
         <input
