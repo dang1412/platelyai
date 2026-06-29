@@ -10,37 +10,71 @@ export type OrderStreamEvent = {
   restaurantId: number;
 };
 
-// Mở EventSource tới /api/orders/stream và gọi onEvent khi có tín hiệu.
-// - onmessage(payload): đơn liên quan đổi trạng thái → caller refetch đơn đó.
-// - onopen (không tham số): (re)connect → caller refetch để bù event lỡ lúc mất kết nối.
-// EventSource tự reconnect khi rớt; chỉ cần đóng khi unmount.
-export function useOrderStream(
-  onEvent: (payload?: OrderStreamEvent) => void,
-): void {
+type Listener = (payload?: OrderStreamEvent) => void;
+
+// ── EventSource DÙNG CHUNG cho cả app ───────────────────────────────────────────────
+// Mọi useOrderStream chia sẻ 1 kết nối tới /api/orders/stream (ref-count). Điều hướng giữa các
+// trang (list ↔ detail) chỉ thêm/bớt listener, KHÔNG đóng/mở lại stream. Khi không còn listener,
+// đóng sau 1 khoảng debounce để qua được lúc unmount→mount trong điều hướng.
+let es: EventSource | null = null;
+let firstOpen = true;
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
+const listeners = new Set<Listener>();
+
+function ensureOpen(): void {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
+  if (es) return;
+  firstOpen = true;
+  es = new EventSource("/api/orders/stream");
+  es.onopen = () => {
+    // Lần connect đầu bỏ qua (mỗi trang tự load khi mount); reconnect sau → refetch bù lỡ.
+    if (firstOpen) {
+      firstOpen = false;
+      return;
+    }
+    for (const l of listeners) l();
+  };
+  es.onmessage = (e) => {
+    let payload: OrderStreamEvent | undefined;
+    try {
+      payload = JSON.parse(e.data) as OrderStreamEvent;
+    } catch {
+      payload = undefined;
+    }
+    for (const l of listeners) l(payload);
+  };
+}
+
+function scheduleCloseIfIdle(): void {
+  if (listeners.size > 0 || closeTimer) return;
+  closeTimer = setTimeout(() => {
+    closeTimer = null;
+    if (listeners.size === 0 && es) {
+      es.close();
+      es = null;
+    }
+  }, 10000);
+}
+
+// Đăng ký nhận tín hiệu đơn từ stream chung.
+// - onmessage(payload): đơn liên quan đổi trạng thái → caller refetch.
+// - reconnect (không tham số): caller refetch để bù event lỡ.
+export function useOrderStream(onEvent: Listener): void {
   const cb = useRef(onEvent);
   useEffect(() => {
     cb.current = onEvent;
   });
 
   useEffect(() => {
-    // Lần connect ĐẦU bỏ qua (caller đã tự load khi mount); chỉ refetch ở các lần RECONNECT sau
-    // để bù event lỡ — tránh fetch trùng ngay khi mở trang.
-    let firstOpen = true;
-    const es = new EventSource("/api/orders/stream");
-    es.onopen = () => {
-      if (firstOpen) {
-        firstOpen = false;
-        return;
-      }
-      cb.current();
+    const listener: Listener = (p) => cb.current(p);
+    listeners.add(listener);
+    ensureOpen();
+    return () => {
+      listeners.delete(listener);
+      scheduleCloseIfIdle();
     };
-    es.onmessage = (e) => {
-      try {
-        cb.current(JSON.parse(e.data) as OrderStreamEvent);
-      } catch {
-        cb.current();
-      }
-    };
-    return () => es.close();
   }, []);
 }
