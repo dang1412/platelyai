@@ -8,7 +8,26 @@ import {
   optionalText,
   optionalLatLng,
 } from "./adminValidate";
-import type { Fulfillment } from "./orders/types";
+import type { Fulfillment, OrderStatus } from "./orders/types";
+
+const ORDER_STATUSES: OrderStatus[] = [
+  "pending",
+  "accepted",
+  "delivering",
+  "arrived",
+  "ready",
+  "completed",
+  "rejected",
+  "cancelled",
+];
+
+// Ép `toStatus` từ body PATCH về OrderStatus hợp lệ (transition hợp lệ kiểm tiếp ở assertCanAct).
+export function requireOrderStatus(v: unknown): OrderStatus {
+  if (typeof v !== "string" || !ORDER_STATUSES.includes(v as OrderStatus)) {
+    throw new ValidationError("Trạng thái không hợp lệ");
+  }
+  return v as OrderStatus;
+}
 
 export type OrderItemInput = { menuItemId: number; quantity: number };
 
