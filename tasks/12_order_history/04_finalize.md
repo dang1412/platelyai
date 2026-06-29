@@ -1,5 +1,7 @@
 # 04 — Finalize (lint/test/build + PR)
 
+> lint sạch · test 116 passed · build OK ✅ — PR: chờ xác nhận user.
+
 ## Vì sao
 Chốt feature, đảm bảo xanh trước khi mở PR (AGENTS §7).
 
