@@ -162,13 +162,22 @@ export default function AuthButton() {
             Đơn của tôi
           </Link>
           {(user.role === "admin" || user.role === "owner") && (
-            <Link
-              href="/admin"
-              onClick={() => setOpen(false)}
-              className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              Trang quản trị
-            </Link>
+            <>
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Trang quản trị
+              </Link>
+              <Link
+                href="/admin/orders"
+                onClick={() => setOpen(false)}
+                className="px-4 py-3 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                Quản lý đơn
+              </Link>
+            </>
           )}
         </nav>
 
