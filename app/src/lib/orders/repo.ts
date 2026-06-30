@@ -182,6 +182,17 @@ export async function pendingCountForSeller(user: CurrentUser): Promise<number> 
   return Number(r.n);
 }
 
+// Số đơn CHƯA hoàn thành của buyer (không gồm completed/rejected/cancelled) — cho badge side menu.
+export async function activeCountForBuyer(buyerId: number): Promise<number> {
+  const [r] = await query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM orders
+      WHERE buyer_id = $1
+        AND status NOT IN ('completed', 'rejected', 'cancelled')`,
+    [buyerId],
+  );
+  return Number(r.n);
+}
+
 export async function createOrder(
   buyerId: number,
   input: CreateOrderInput,

@@ -25,18 +25,21 @@ function Icon({ children }: { children: ReactNode }) {
 }
 
 // Một dòng link trong side menu: icon + nhãn (+ badge số thông báo tuỳ chọn).
+// badgeTone: "alert" (đỏ — việc cần xử lý) | "muted" (nhạt — chỉ là số đếm, không gấp).
 function NavLink({
   href,
   label,
   icon,
   onNavigate,
   badge,
+  badgeTone = "alert",
 }: {
   href: string;
   label: string;
   icon: ReactNode;
   onNavigate: () => void;
   badge?: number;
+  badgeTone?: "alert" | "muted";
 }) {
   return (
     <Link
@@ -47,7 +50,13 @@ function NavLink({
       <span className="text-zinc-500 dark:text-zinc-400">{icon}</span>
       {label}
       {badge != null && badge > 0 && (
-        <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+        <span
+          className={`ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium ${
+            badgeTone === "muted"
+              ? "bg-surface-muted text-muted-foreground"
+              : "bg-red-500 text-white"
+          }`}
+        >
           {badge}
         </span>
       )}
@@ -110,6 +119,26 @@ export default function AuthButton() {
       active = false;
     };
   }, [isStaff]);
+
+  // Badge nhóm "Khách đặt": số đơn chưa hoàn thành + số quán yêu thích (mọi user đã đăng nhập).
+  const authed = Boolean(session?.user);
+  const [activeOrders, setActiveOrders] = useState(0);
+  const [favCount, setFavCount] = useState(0);
+  useEffect(() => {
+    if (!authed) return;
+    let active = true;
+    fetch("/api/orders?count=active")
+      .then((r) => (r.ok ? r.json() : { activeCount: 0 }))
+      .then((d: { activeCount?: number }) => active && setActiveOrders(d.activeCount ?? 0))
+      .catch(() => {});
+    fetch("/api/favorites?count=1")
+      .then((r) => (r.ok ? r.json() : { count: 0 }))
+      .then((d: { count?: number }) => active && setFavCount(d.count ?? 0))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [authed]);
 
   if (status === "loading") {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />;
@@ -235,6 +264,7 @@ export default function AuthButton() {
             href="/orders"
             label="Đơn của tôi"
             onNavigate={() => setOpen(false)}
+            badge={activeOrders}
             icon={
               <Icon>
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
@@ -247,6 +277,8 @@ export default function AuthButton() {
             href="/favorites"
             label="Quán yêu thích"
             onNavigate={() => setOpen(false)}
+            badge={favCount}
+            badgeTone="muted"
             icon={
               <Icon>
                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A3.5 3.5 0 0 0 18.5 5c-1.74 0-3 .5-4.5 2-1.5-1.5-2.76-2-4.5-2A3.5 3.5 0 0 0 6 8.5c0 2.29 1.51 4.04 3 5.5l5 5Z" />

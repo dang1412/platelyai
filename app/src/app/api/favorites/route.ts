@@ -6,22 +6,28 @@ import {
   addFavorite,
   removeFavorite,
   listFavoriteRestaurants,
+  countFavorites,
 } from "@/lib/favorites/repo";
 
 export const runtime = "nodejs";
 
 // GET /api/favorites
 //   ?restaurantId=<id> → { favorite: boolean } (trạng thái 1 quán, cho nút tim ở modal)
+//   ?count=1           → { count } (badge side menu — chỉ COUNT)
 //   không param        → { restaurants: [...] } (danh sách quán yêu thích, cho trang /favorites)
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const user = await getCurrentUser();
     if (!user) throw new AuthzError(401, "Chưa đăng nhập");
 
-    const raw = request.nextUrl.searchParams.get("restaurantId");
+    const sp = request.nextUrl.searchParams;
+    const raw = sp.get("restaurantId");
     if (raw != null) {
       const restaurantId = requireIntId(raw, "restaurantId");
       return Response.json({ favorite: await isFavorite(user.id, restaurantId) });
+    }
+    if (sp.get("count") === "1") {
+      return Response.json({ count: await countFavorites(user.id) });
     }
     return Response.json({ restaurants: await listFavoriteRestaurants(user.id) });
   } catch (err) {
