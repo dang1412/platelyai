@@ -1,5 +1,7 @@
 # 02 — Validate input profile
 
+> Commit: 6b54ade — feat(profile): validate input + unit test ✅ (8 test xanh)
+
 ## Vì sao
 
 Validate-at-the-edge (MUST): ép kiểu + chặn giá trị xấu TRƯỚC khi route chạm DB. Tách riêng logic
