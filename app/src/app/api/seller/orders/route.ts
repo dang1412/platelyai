@@ -1,13 +1,13 @@
 import type { NextRequest } from "next/server";
 import { getCurrentUser, AuthzError, authzResponse } from "@/lib/authz";
 import { requireIntId, validationResponse } from "@/lib/adminValidate";
-import { listOrdersForSeller, pendingCountForSeller } from "@/lib/orders/repo";
+import { listOrdersForSeller, sellerOrderCounts } from "@/lib/orders/repo";
 
 export const runtime = "nodejs";
 
 // GET /api/seller/orders — đơn của các quán seller quản lý (admin: tất cả).
 //   ?restaurant=<id>  lọc theo 1 quán
-//   ?count=pending    chỉ trả { pendingCount } (cho badge side menu)
+//   ?count=pending    chỉ trả { pendingCount, inProgressCount } (cho 2 badge side menu)
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const user = await getCurrentUser();
@@ -16,7 +16,8 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const sp = request.nextUrl.searchParams;
     if (sp.get("count") === "pending") {
-      return Response.json({ pendingCount: await pendingCountForSeller(user) });
+      const { pending, inProgress } = await sellerOrderCounts(user);
+      return Response.json({ pendingCount: pending, inProgressCount: inProgress });
     }
 
     const restaurantParam = sp.get("restaurant");

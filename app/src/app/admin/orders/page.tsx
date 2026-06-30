@@ -58,9 +58,9 @@ export default async function AdminOrdersPage({
         </button>
       </form>
 
-      <Section title="Cần xử lý" orders={needsAction} emptyText="Không có đơn chờ xác nhận." urgent />
-      <Section title="Đang làm" orders={inProgress} emptyText="Không có đơn đang xử lý." />
-      <Section title="Hoàn tất · Huỷ" orders={done} emptyText="Chưa có đơn kết thúc." />
+      <Section title="Cần xử lý" orders={needsAction} emptyText="Không có đơn chờ xác nhận." tone="alert" />
+      <Section title="Đang làm" orders={inProgress} emptyText="Không có đơn đang xử lý." tone="warn" />
+      <Section title="Hoàn tất · Huỷ" orders={done} emptyText="Chưa có đơn kết thúc." tone="muted" />
     </main>
   );
 }
@@ -69,24 +69,29 @@ function Section({
   title,
   orders,
   emptyText,
-  urgent = false,
+  tone = "muted",
 }: {
   title: string;
   orders: Order[];
   emptyText: string;
-  urgent?: boolean;
+  // alert (đỏ — cần xử lý) | warn (cam — đang làm) | muted (chỉ đếm trong ngoặc).
+  tone?: "alert" | "warn" | "muted";
 }) {
   return (
     <section className="mb-8 last:mb-0">
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
         {title}
         {orders.length > 0 &&
-          (urgent ? (
-            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-xs font-medium text-brand-foreground">
+          (tone === "muted" ? (
+            <span className="text-muted-foreground">({orders.length})</span>
+          ) : (
+            <span
+              className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium text-brand-foreground ${
+                tone === "alert" ? "bg-danger" : "bg-brand"
+              }`}
+            >
               {orders.length}
             </span>
-          ) : (
-            <span className="text-muted-foreground">({orders.length})</span>
           ))}
       </h2>
       {orders.length === 0 ? (

@@ -38,6 +38,15 @@ export async function removeFavorite(
   );
 }
 
+// Số quán đã đánh dấu — cho badge side menu (chỉ COUNT, không nạp summary).
+export async function countFavorites(userId: number): Promise<number> {
+  const [r] = await query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM user_favorites WHERE user_id = $1`,
+    [userId],
+  );
+  return Number(r.n);
+}
+
 // Quán yêu thích của user (mới đánh dấu lên trước) — dạng summary để render card.
 export async function listFavoriteRestaurants(
   userId: number,

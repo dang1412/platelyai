@@ -7,7 +7,7 @@ import {
   advanceStatus,
   getOrderAuth,
   listOrdersForSeller,
-  pendingCountForSeller,
+  sellerOrderCounts,
 } from "./repo";
 
 // Lưu ý: KHÔNG import @/lib/orders/authz ở đây — nó kéo @/lib/authz → @/auth (next-auth) vốn
@@ -149,13 +149,13 @@ d("orders repo (DB thật)", () => {
     ]);
   });
 
-  it("listOrdersForSeller / pendingCount chỉ thấy đơn của quán mình", async () => {
+  it("listOrdersForSeller / sellerOrderCounts chỉ thấy đơn của quán mình", async () => {
     const list = await listOrdersForSeller(owner, restaurantId);
     expect(list.length).toBeGreaterThan(0);
     expect(list.every((o) => o.restaurantId === String(restaurantId))).toBe(true);
 
     expect(await listOrdersForSeller(other, restaurantId)).toEqual([]);
-    expect(await pendingCountForSeller(other)).toBe(0);
-    expect(await pendingCountForSeller(owner)).toBeGreaterThanOrEqual(1);
+    expect((await sellerOrderCounts(other)).pending).toBe(0);
+    expect((await sellerOrderCounts(owner)).pending).toBeGreaterThanOrEqual(1);
   });
 });
