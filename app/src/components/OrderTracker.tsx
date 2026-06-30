@@ -54,6 +54,11 @@ export function OrderTracker({ id }: { id: string }) {
       return;
     }
     if (String(payload.orderId) !== id) return;
+    // Payload chỉ mang status (không có note). Đơn bị từ chối → refetch để lấy lý do hiển thị.
+    if (payload.status === "rejected") {
+      refetch();
+      return;
+    }
     setOrder((prev) => (prev ? { ...prev, status: payload.status as OrderStatus } : prev));
   });
 
@@ -86,6 +91,11 @@ export function OrderTracker({ id }: { id: string }) {
   const canCancel = order.status === "pending" || order.status === "accepted";
   const canReceive = order.status === "arrived" || order.status === "ready";
   const highlight = HIGHLIGHT[order.status];
+  // Lý do từ chối: note của event 'rejected' gần nhất (do seller nhập khi từ chối).
+  const rejectReason =
+    order.status === "rejected"
+      ? order.events.filter((e) => e.status === "rejected").at(-1)?.note
+      : undefined;
 
   return (
     <div className="flex flex-col gap-5">
@@ -97,6 +107,13 @@ export function OrderTracker({ id }: { id: string }) {
       {highlight && (
         <p className="rounded-lg border border-brand bg-brand/10 px-4 py-3 text-sm font-medium text-brand">
           {highlight}
+        </p>
+      )}
+
+      {order.status === "rejected" && (
+        <p className="rounded-lg border border-brand bg-brand/10 px-4 py-3 text-sm text-brand">
+          <span className="font-medium">Đơn đã bị từ chối.</span>
+          {rejectReason && <> Lý do: {rejectReason}</>}
         </p>
       )}
 
