@@ -62,13 +62,16 @@ function scheduleCloseIfIdle(): void {
 // Đăng ký nhận tín hiệu đơn từ stream chung.
 // - onmessage(payload): đơn liên quan đổi trạng thái → caller refetch.
 // - reconnect (không tham số): caller refetch để bù event lỡ.
-export function useOrderStream(onEvent: Listener): void {
+// `enabled=false` (vd user chưa đăng nhập) → không đăng ký/không mở stream (tránh gọi
+// /api/orders/stream → 401 retry liên tục). Khi bật lại mới mở.
+export function useOrderStream(onEvent: Listener, enabled = true): void {
   const cb = useRef(onEvent);
   useEffect(() => {
     cb.current = onEvent;
   });
 
   useEffect(() => {
+    if (!enabled) return;
     const listener: Listener = (p) => cb.current(p);
     listeners.add(listener);
     ensureOpen();
@@ -76,5 +79,5 @@ export function useOrderStream(onEvent: Listener): void {
       listeners.delete(listener);
       scheduleCloseIfIdle();
     };
-  }, []);
+  }, [enabled]);
 }

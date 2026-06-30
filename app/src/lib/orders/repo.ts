@@ -165,21 +165,27 @@ export function listOrdersForSeller(
   return loadOrders(query, where, params);
 }
 
-export async function pendingCountForSeller(user: CurrentUser): Promise<number> {
-  if (user.role === "user") return 0;
-  if (user.role === "admin") {
-    const [r] = await query<{ n: string }>(
-      `SELECT count(*)::text AS n FROM orders WHERE status = 'pending'`,
-    );
-    return Number(r.n);
-  }
-  const [r] = await query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM orders
-      WHERE status = 'pending'
-        AND restaurant_id IN (SELECT restaurant_id FROM restaurant_owners WHERE user_id = $1)`,
-    [user.id],
+// Số đơn cần xử lý (pending) + đang làm (accepted/delivering/arrived/ready) của seller — cho 2
+// badge side menu. 1 query với FILTER. Owner: chỉ quán mình; admin: tất cả; user thường: 0.
+export async function sellerOrderCounts(
+  user: CurrentUser,
+): Promise<{ pending: number; inProgress: number }> {
+  if (user.role === "user") return { pending: 0, inProgress: 0 };
+
+  const sel = `count(*) FILTER (WHERE status = 'pending')::text AS pending,
+               count(*) FILTER (WHERE status IN
+                 ('accepted', 'delivering', 'arrived', 'ready'))::text AS inprogress`;
+  const where =
+    user.role === "admin"
+      ? ""
+      : `WHERE restaurant_id IN (SELECT restaurant_id FROM restaurant_owners WHERE user_id = $1)`;
+  const params = user.role === "admin" ? [] : [user.id];
+
+  const [r] = await query<{ pending: string; inprogress: string }>(
+    `SELECT ${sel} FROM orders ${where}`,
+    params,
   );
-  return Number(r.n);
+  return { pending: Number(r.pending), inProgress: Number(r.inprogress) };
 }
 
 // Số đơn CHƯA hoàn thành của buyer (không gồm completed/rejected/cancelled) — cho badge side menu.

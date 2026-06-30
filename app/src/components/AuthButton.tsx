@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
+import { useOrderStream } from "@/lib/useOrderStream";
 
 // Khung icon dùng chung trong side menu (24x24, stroke theo currentColor).
 function Icon({ children }: { children: ReactNode }) {
@@ -24,23 +25,31 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 
-// Một dòng link trong side menu: icon + nhãn (+ badge số thông báo tuỳ chọn).
-// badgeTone: "alert" (đỏ — việc cần xử lý) | "muted" (nhạt — chỉ là số đếm, không gấp).
+// Tông màu badge: alert (đỏ — cần xử lý) | warn (cam — đang làm) | muted (nhạt — chỉ đếm).
+type BadgeTone = "alert" | "warn" | "muted";
+type Badge = { count: number; tone: BadgeTone };
+
+const BADGE_CLASS: Record<BadgeTone, string> = {
+  alert: "bg-danger text-brand-foreground",
+  warn: "bg-brand text-brand-foreground",
+  muted: "bg-surface-muted text-muted-foreground",
+};
+
+// Một dòng link trong side menu: icon + nhãn (+ các badge số tuỳ chọn, ẩn badge có count 0).
 function NavLink({
   href,
   label,
   icon,
   onNavigate,
-  badge,
-  badgeTone = "alert",
+  badges,
 }: {
   href: string;
   label: string;
   icon: ReactNode;
   onNavigate: () => void;
-  badge?: number;
-  badgeTone?: "alert" | "muted";
+  badges?: Badge[];
 }) {
+  const shown = (badges ?? []).filter((b) => b.count > 0);
   return (
     <Link
       href={href}
@@ -49,15 +58,16 @@ function NavLink({
     >
       <span className="text-zinc-500 dark:text-zinc-400">{icon}</span>
       {label}
-      {badge != null && badge > 0 && (
-        <span
-          className={`ml-auto inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium ${
-            badgeTone === "muted"
-              ? "bg-surface-muted text-muted-foreground"
-              : "bg-red-500 text-white"
-          }`}
-        >
-          {badge}
+      {shown.length > 0 && (
+        <span className="ml-auto flex items-center gap-1">
+          {shown.map((b, i) => (
+            <span
+              key={i}
+              className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-medium ${BADGE_CLASS[b.tone]}`}
+            >
+              {b.count}
+            </span>
+          ))}
         </span>
       )}
     </Link>
@@ -104,41 +114,54 @@ export default function AuthButton() {
     if (!popup) signIn("google");
   }, []);
 
-  // Badge số đơn cần xử lý (pending) cho link "Quản lý đơn" — đếm thật từ API (chỉ owner/admin).
+  // Badge đơn cho "Quản lý đơn" (cần xử lý + đang làm) — chỉ owner/admin.
   const isStaff =
     session?.user?.role === "admin" || session?.user?.role === "owner";
-  const [pendingCount, setPendingCount] = useState(0);
-  useEffect(() => {
-    if (!isStaff) return;
-    let active = true;
-    fetch("/api/seller/orders?count=pending")
-      .then((r) => (r.ok ? r.json() : { pendingCount: 0 }))
-      .then((d: { pendingCount?: number }) => active && setPendingCount(d.pendingCount ?? 0))
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [isStaff]);
-
-  // Badge nhóm "Khách đặt": số đơn chưa hoàn thành + số quán yêu thích (mọi user đã đăng nhập).
   const authed = Boolean(session?.user);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [inProgressCount, setInProgressCount] = useState(0);
   const [activeOrders, setActiveOrders] = useState(0);
   const [favCount, setFavCount] = useState(0);
-  useEffect(() => {
-    if (!authed) return;
-    let active = true;
+
+  // Đếm đơn của seller (cần xử lý + đang làm). Tách thành callback để dùng lại ở mount + SSE.
+  const loadStaffCounts = useCallback(() => {
+    fetch("/api/seller/orders?count=pending")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d: { pendingCount?: number; inProgressCount?: number }) => {
+        setPendingCount(d.pendingCount ?? 0);
+        setInProgressCount(d.inProgressCount ?? 0);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Đếm đơn chưa hoàn thành của buyer ("Đơn của tôi").
+  const loadBuyerCounts = useCallback(() => {
     fetch("/api/orders?count=active")
       .then((r) => (r.ok ? r.json() : { activeCount: 0 }))
-      .then((d: { activeCount?: number }) => active && setActiveOrders(d.activeCount ?? 0))
+      .then((d: { activeCount?: number }) => setActiveOrders(d.activeCount ?? 0))
       .catch(() => {});
+  }, []);
+
+  // Tải lần đầu khi mount/đăng nhập.
+  useEffect(() => {
+    if (isStaff) loadStaffCounts();
+  }, [isStaff, loadStaffCounts]);
+  useEffect(() => {
+    if (!authed) return;
+    loadBuyerCounts();
+    // favCount (quán yêu thích) — chỉ tải khi mount/điều hướng, không qua SSE (không phải order event).
     fetch("/api/favorites?count=1")
       .then((r) => (r.ok ? r.json() : { count: 0 }))
-      .then((d: { count?: number }) => active && setFavCount(d.count ?? 0))
+      .then((d: { count?: number }) => setFavCount(d.count ?? 0))
       .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, [authed]);
+  }, [authed, loadBuyerCounts]);
+
+  // Realtime: mọi order event (đổi trạng thái / đơn mới) + reconnect → refetch badge đơn.
+  // Dùng lại stream chung của useOrderStream (không mở kết nối mới). Chỉ bật khi đã đăng nhập.
+  useOrderStream(() => {
+    if (isStaff) loadStaffCounts();
+    if (authed) loadBuyerCounts();
+  }, authed);
 
   if (status === "loading") {
     return <div className="h-9 w-9 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />;
@@ -264,7 +287,7 @@ export default function AuthButton() {
             href="/orders"
             label="Đơn của tôi"
             onNavigate={() => setOpen(false)}
-            badge={activeOrders}
+            badges={[{ count: activeOrders, tone: "alert" }]}
             icon={
               <Icon>
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
@@ -277,8 +300,7 @@ export default function AuthButton() {
             href="/favorites"
             label="Quán yêu thích"
             onNavigate={() => setOpen(false)}
-            badge={favCount}
-            badgeTone="muted"
+            badges={[{ count: favCount, tone: "muted" }]}
             icon={
               <Icon>
                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A3.5 3.5 0 0 0 18.5 5c-1.74 0-3 .5-4.5 2-1.5-1.5-2.76-2-4.5-2A3.5 3.5 0 0 0 6 8.5c0 2.29 1.51 4.04 3 5.5l5 5Z" />
@@ -318,7 +340,10 @@ export default function AuthButton() {
                 href="/admin/orders"
                 label="Quản lý đơn"
                 onNavigate={() => setOpen(false)}
-                badge={pendingCount}
+                badges={[
+                  { count: pendingCount, tone: "alert" },
+                  { count: inProgressCount, tone: "warn" },
+                ]}
                 icon={
                   <Icon>
                     <rect x="8" y="2" width="8" height="4" rx="1" />
