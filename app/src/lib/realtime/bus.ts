@@ -80,14 +80,17 @@ export function stopListening(): void {
   state.ready = null;
 }
 
-// User quan tâm tới 1 event: buyer của đơn + các owner của quán (admin xem qua refetch khi mở tab).
+// User quan tâm tới 1 event: buyer của đơn + owner của quán + mọi admin (admin xem được mọi đơn
+// trên dashboard nên cũng cần tín hiệu realtime, dù không phải owner của quán).
 async function interestedUsers(payload: OrderNotify): Promise<Set<number>> {
   const ids = new Set<number>([payload.buyerId]);
-  const owners = await query<{ user_id: string }>(
-    `SELECT user_id FROM restaurant_owners WHERE restaurant_id = $1`,
+  const rows = await query<{ id: string }>(
+    `SELECT user_id AS id FROM restaurant_owners WHERE restaurant_id = $1
+     UNION
+     SELECT id FROM users WHERE role = 'admin'`,
     [payload.restaurantId],
   );
-  for (const o of owners) ids.add(Number(o.user_id));
+  for (const r of rows) ids.add(Number(r.id));
   return ids;
 }
 
