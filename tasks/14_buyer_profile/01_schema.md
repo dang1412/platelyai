@@ -1,5 +1,7 @@
 # 01 — Schema: thông tin mặc định của buyer
 
+> Commit: aa608ea — feat(profile): schema cột default_* trên users ✅ (đã apply + verify trên DB dev)
+
 ## Vì sao
 
 Cần chỗ lưu SĐT + địa chỉ + toạ độ mặc định cho mỗi buyer. 1 buyer = 1 bộ → thêm cột vào `users`
