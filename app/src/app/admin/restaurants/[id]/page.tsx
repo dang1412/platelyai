@@ -6,8 +6,9 @@ import { loadAllTags } from "@/lib/tags";
 import InfoForm from "@/components/admin/InfoForm";
 import MenuEditor from "@/components/admin/MenuEditor";
 import MenuImport from "@/components/admin/MenuImport";
-import OwnerForm from "@/components/admin/OwnerForm";
+import OwnerManager from "@/components/admin/OwnerManager";
 import RatingForm from "@/components/admin/RatingForm";
+import { listRestaurantOwners } from "@/lib/owners";
 import TagEditor from "@/components/admin/TagEditor";
 
 // Trang sửa một quán: thông tin + menu (+ gán owner nếu admin). Quyền theo từng quán.
@@ -39,6 +40,7 @@ export default async function RestaurantEditPage({
   if (!data) notFound();
 
   const allTags = await loadAllTags();
+  const owners = user.role === "admin" ? await listRestaurantOwners(data.id) : [];
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 p-6">
@@ -81,9 +83,10 @@ export default async function RestaurantEditPage({
         <section>
           <h2 className="mb-1 text-lg font-semibold">Chủ quán</h2>
           <p className="mb-3 text-sm text-black/60">
-            Gán quyền quản lý quán này cho một tài khoản đã đăng nhập.
+            Một quán có thể có nhiều chủ. Gán thêm theo email (tài khoản đã đăng nhập) hoặc
+            gỡ chủ quán hiện tại.
           </p>
-          <OwnerForm restaurantId={data.id} />
+          <OwnerManager restaurantId={data.id} owners={owners} />
         </section>
       )}
 
