@@ -108,6 +108,8 @@ export function OrderTracker({ id }: { id: string }) {
         fulfillment={order.fulfillment}
         phone={order.phone}
         address={order.address}
+        lat={order.lat}
+        lng={order.lng}
       />
 
       {(canCancel || canReceive) && (

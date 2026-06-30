@@ -1,8 +1,7 @@
 // Tóm tắt nội dung đơn — danh sách món × SL, tổng tiền, kiểu nhận hàng, SDT.
-// Presentational; phần "Kiểm tra toạ độ → mở bản đồ" tách ra AddressMapLink (client).
+// Presentational thuần: đơn đã lưu sẵn toạ độ giao → mở bản đồ thẳng theo toạ độ (không geocode lại).
 
 import type { Fulfillment, OrderItem } from "@/lib/orders/types";
-import { AddressMapLink } from "@/components/AddressMapLink";
 
 // Định dạng giá VND (như RestaurantModal).
 function formatPrice(price: number): string {
@@ -15,9 +14,19 @@ type Props = {
   fulfillment: Fulfillment;
   phone: string;
   address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
-export function OrderSummary({ items, total, fulfillment, phone, address }: Props) {
+export function OrderSummary({
+  items,
+  total,
+  fulfillment,
+  phone,
+  address,
+  lat,
+  lng,
+}: Props) {
   return (
     <div className="rounded-lg border border-border bg-surface p-4">
       {/* Danh sách món */}
@@ -50,7 +59,20 @@ export function OrderSummary({ items, total, fulfillment, phone, address }: Prop
           <div className="flex gap-2">
             <dt>Địa chỉ:</dt>
             <dd className="text-foreground">
-              {address} <AddressMapLink address={address} />
+              {address}
+              {lat != null && lng != null && (
+                <>
+                  {" "}
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="whitespace-nowrap text-brand hover:underline"
+                  >
+                    Mở bản đồ ↗
+                  </a>
+                </>
+              )}
             </dd>
           </div>
         )}

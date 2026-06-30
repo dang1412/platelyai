@@ -32,6 +32,8 @@ type OrderRow = {
   status: OrderStatus;
   buyer_phone: string;
   delivery_address: string | null;
+  delivery_lat: number | string | null;
+  delivery_lng: number | string | null;
   note: string | null;
   total_amount: number;
   created_at: Date;
@@ -62,7 +64,8 @@ async function loadOrders(
 ): Promise<Order[]> {
   const orders = await q<OrderRow>(
     `SELECT o.id, o.restaurant_id, o.fulfillment_type, o.status, o.buyer_phone,
-            o.delivery_address, o.note, o.total_amount, o.created_at,
+            o.delivery_address, o.delivery_lat, o.delivery_lng, o.note,
+            o.total_amount, o.created_at,
             r.name AS restaurant_name
        FROM orders o
        JOIN restaurants r ON r.id = o.restaurant_id
@@ -100,6 +103,8 @@ async function loadOrders(
     total: o.total_amount,
     phone: o.buyer_phone,
     address: o.delivery_address,
+    lat: o.delivery_lat == null ? null : Number(o.delivery_lat),
+    lng: o.delivery_lng == null ? null : Number(o.delivery_lng),
     note: o.note,
     events: events
       .filter((e) => e.order_id === o.id)
