@@ -1,18 +1,18 @@
-// Trang "Quán yêu thích của tôi": liệt kê quán đã đánh dấu, bấm card mở modal quán ở trang chủ
-// (?quan=<id>). "use client" — cần fetch + điều hướng.
+// Trang "Quán yêu thích của tôi": liệt kê quán đã đánh dấu, bấm card mở modal quán NGAY tại
+// trang này (dùng lại RestaurantModal như trang chủ). "use client" — cần fetch + state modal.
 
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import SiteHeader from "@/components/SiteHeader";
 import RestaurantCard from "@/components/RestaurantCard";
+import RestaurantModal from "@/components/RestaurantModal";
 import type { RestaurantSummary } from "@/lib/types";
 
 export default function FavoritesPage() {
-  const router = useRouter();
   const [restaurants, setRestaurants] = useState<RestaurantSummary[] | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -54,11 +54,17 @@ export default function FavoritesPage() {
             <RestaurantCard
               key={r.id}
               restaurant={r}
-              onClick={() => router.push(`/?quan=${r.id}`)}
+              onClick={() => setSelectedId(r.id)}
             />
           ))}
         </div>
       )}
+
+      <RestaurantModal
+        key={selectedId ?? "none"}
+        restaurantId={selectedId}
+        onClose={() => setSelectedId(null)}
+      />
     </main>
   );
 }
