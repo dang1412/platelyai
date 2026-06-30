@@ -44,6 +44,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
 
     // Lần đăng nhập đầu (có `user`): nạp id + role từ DB vào token.
+    // Các lần sau: làm tươi role từ DB theo uid — role đổi khi gán/gỡ chủ quán, nếu không
+    // refetch thì JWT giữ role cũ (vd owner đã bị gỡ vẫn thấy phần Quản trị tới lần đăng nhập sau).
     async jwt({ token, user }) {
       if (user?.email) {
         const rows = await query<{ id: string; role: Role }>(
@@ -54,6 +56,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.uid = rows[0].id;
           token.role = rows[0].role;
         }
+      } else if (token.uid) {
+        const rows = await query<{ role: Role }>(
+          `SELECT role FROM users WHERE id = $1`,
+          [token.uid],
+        );
+        if (rows[0]) token.role = rows[0].role;
       }
       return token;
     },
