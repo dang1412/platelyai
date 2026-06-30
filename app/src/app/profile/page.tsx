@@ -20,10 +20,13 @@ export default function ProfilePage() {
   const [address, setAddress] = useState("");
   const [showErrors, setShowErrors] = useState(false);
 
-  // Kết quả geocode địa chỉ (toạ độ lưu kèm để prefill mang sẵn gate bán kính).
+  // Toạ độ lưu kèm địa chỉ (để prefill mang sẵn gate bán kính). Nguồn: từ địa chỉ text
+  // (geocode) hoặc vị trí hiện tại (GPS). Bấm nút nào sau thì toạ độ đó thắng.
   const [geo, setGeo] = useState<LatLng | null>(null);
+  const [geoSource, setGeoSource] = useState<"address" | "current" | null>(null);
   const [geoErr, setGeoErr] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   // Trạng thái lưu.
   const [saving, setSaving] = useState(false);
@@ -45,19 +48,23 @@ export default function ProfilePage() {
       .finally(() => setLoaded(true));
   }, []);
 
-  // Đổi địa chỉ → toạ độ cũ không còn đúng, reset.
+  // Đổi địa chỉ text → toạ độ suy ra từ text không còn đúng, reset. Giữ toạ độ GPS (vị trí
+  // hiện tại) vì nó độc lập với text.
   const onAddressChange = (value: string) => {
     setAddress(value);
-    setGeo(null);
+    if (geoSource !== "current") {
+      setGeo(null);
+      setGeoSource(null);
+    }
     setGeoErr(null);
     setSaved(false);
   };
 
+  // Lấy toạ độ TỪ ĐỊA CHỈ TEXT qua geocode.
   const checkAddress = async () => {
     const q = address.trim();
     if (!q) return;
     setChecking(true);
-    setGeo(null);
     setGeoErr(null);
     try {
       const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
@@ -67,11 +74,40 @@ export default function ProfilePage() {
         return;
       }
       setGeo((await res.json()) as LatLng);
+      setGeoSource("address");
+      setSaved(false);
     } catch {
       setGeoErr("Lỗi mạng khi kiểm tra địa chỉ.");
     } finally {
       setChecking(false);
     }
+  };
+
+  // Lấy toạ độ TỪ VỊ TRÍ HIỆN TẠI qua trình duyệt (GPS).
+  const useCurrentLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoErr("Trình duyệt không hỗ trợ định vị.");
+      return;
+    }
+    setLocating(true);
+    setGeoErr(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoSource("current");
+        setSaved(false);
+        setLocating(false);
+      },
+      (err) => {
+        setGeoErr(
+          err.code === err.PERMISSION_DENIED
+            ? "Bạn đã từ chối quyền vị trí."
+            : "Không lấy được vị trí hiện tại.",
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 5 * 60_000 },
+    );
   };
 
   const phoneError = phone.trim() !== "" && !PHONE_RE.test(phone.trim());
@@ -152,18 +188,34 @@ export default function ProfilePage() {
               className={inputClass}
             />
             <div className="mt-2 flex flex-col gap-1">
-              <button
-                type="button"
-                onClick={checkAddress}
-                disabled={checking || address.trim() === ""}
-                className="self-start rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {checking ? "Đang kiểm tra…" : "Kiểm tra địa chỉ"}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={checkAddress}
+                  disabled={checking || address.trim() === ""}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {checking ? "Đang kiểm tra…" : "Kiểm tra địa chỉ"}
+                </button>
+                <button
+                  type="button"
+                  onClick={useCurrentLocation}
+                  disabled={locating}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {locating ? "Đang lấy vị trí…" : "📍 Dùng vị trí hiện tại"}
+                </button>
+              </div>
               {geoErr && <p className={errClass}>{geoErr}</p>}
               {geo && (
                 <p className="text-xs text-success">
-                  ✓ Đã xác định toạ độ ·{" "}
+                  ✓ Đã có toạ độ{" "}
+                  {geoSource === "current"
+                    ? "(vị trí hiện tại)"
+                    : geoSource === "address"
+                      ? "(từ địa chỉ)"
+                      : ""}{" "}
+                  ·{" "}
                   <a
                     href={`https://www.google.com/maps/search/?api=1&query=${geo.lat},${geo.lng}`}
                     target="_blank"
