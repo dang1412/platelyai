@@ -1,12 +1,35 @@
 import { query } from "@/lib/db";
 import { getCurrentUser, authzResponse, AuthzError } from "@/lib/authz";
 import { requireIntId, requireText, validationResponse } from "@/lib/adminValidate";
+import {
+  assignRestaurantOwner,
+  removeRestaurantOwner,
+  ownerErrorResponse,
+} from "@/lib/owners";
 
 export const runtime = "nodejs";
 
+// Chỉ admin được gán/gỡ chủ quán. Trả về user admin (đã chắc chắn non-null).
+async function requireAdmin() {
+  const user = await getCurrentUser();
+  if (!user) throw new AuthzError(401, "Chưa đăng nhập");
+  if (user.role !== "admin") {
+    throw new AuthzError(403, "Chỉ admin được quản lý chủ quán");
+  }
+  return user;
+}
+
+function errorResponse(err: unknown): Response {
+  return (
+    authzResponse(err) ??
+    ownerErrorResponse(err) ??
+    validationResponse(err) ??
+    Response.json({ error: "Lỗi máy chủ" }, { status: 500 })
+  );
+}
+
 // POST /api/admin/restaurants/:id/owners -> gán owner cho quán theo email (chỉ admin).
-// User phải đã từng đăng nhập (có dòng trong users). Gán xong nâng role 'user' -> 'owner'
-// để họ vào được /admin (xem authz: owner chỉ thấy quán mình sở hữu).
+// User phải đã từng đăng nhập (có dòng trong users). Gán xong nâng role 'user' -> 'owner'.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -14,12 +37,7 @@ export async function POST(
   try {
     const { id } = await params;
     const restaurantId = requireIntId(id);
-
-    const user = await getCurrentUser();
-    if (!user) throw new AuthzError(401, "Chưa đăng nhập");
-    if (user.role !== "admin") {
-      throw new AuthzError(403, "Chỉ admin được gán chủ quán");
-    }
+    await requireAdmin();
 
     const body = await request.json().catch(() => ({}));
     const email = requireText(body.email, "Email").toLowerCase();
@@ -31,33 +49,32 @@ export async function POST(
       return Response.json({ error: "Không tìm thấy quán" }, { status: 404 });
     }
 
-    const users = await query<{ id: string }>(
-      `SELECT id FROM users WHERE email = $1 LIMIT 1`,
-      [email],
-    );
-    if (users.length === 0) {
-      return Response.json(
-        { error: "Email chưa từng đăng nhập hệ thống" },
-        { status: 404 },
-      );
-    }
-    const userId = Number(users[0].id);
-
-    await query(
-      `INSERT INTO restaurant_owners (restaurant_id, user_id)
-       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [restaurantId, userId],
-    );
-    await query(`UPDATE users SET role = 'owner' WHERE id = $1 AND role = 'user'`, [
-      userId,
-    ]);
+    await assignRestaurantOwner(restaurantId, email);
 
     return Response.json({ ok: true }, { status: 201 });
   } catch (err) {
-    return (
-      authzResponse(err) ??
-      validationResponse(err) ??
-      Response.json({ error: "Lỗi máy chủ" }, { status: 500 })
-    );
+    return errorResponse(err);
+  }
+}
+
+// DELETE /api/admin/restaurants/:id/owners -> gỡ owner khỏi quán theo userId (chỉ admin).
+// Idempotent: gỡ dòng không tồn tại vẫn 200. Hết quán thì hạ role owner -> user (xem lib).
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
+  try {
+    const { id } = await params;
+    const restaurantId = requireIntId(id);
+    await requireAdmin();
+
+    const body = await request.json().catch(() => ({}));
+    const userId = requireIntId(body.userId, "userId");
+
+    await removeRestaurantOwner(restaurantId, userId);
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    return errorResponse(err);
   }
 }
