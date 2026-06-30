@@ -11,13 +11,13 @@ Cho buyer lưu sẵn SĐT + địa chỉ (kèm toạ độ) ở `/profile`; khi 
 
 ## Checklist (theo thứ tự phụ thuộc)
 
-- [ ] `01_schema.md` — thêm cột `default_*` vào `users` (`db/init/12_buyer_profile.sql`)
-- [ ] `02_validate.md` — `profileValidate.ts` + unit test
-- [ ] `03_repo.md` — `profile/repo.ts` (get/upsert)
-- [ ] `04_api.md` — `api/profile/route.ts` (GET/PUT)
-- [ ] `05_profile_page.md` — trang `/profile` (UI + geocode + save)
-- [ ] `06_prefill_order.md` — `OrderForm` prop `initial` + `RestaurantModal` fetch + nav link
-- [ ] `07_finalize.md` — lint/test/build + PR
+- [x] `01_schema.md` — thêm cột `default_*` vào `users` (`db/init/12_buyer_profile.sql`)
+- [x] `02_validate.md` — `profileValidate.ts` + unit test
+- [x] `03_repo.md` — `profile/repo.ts` (get/upsert)
+- [x] `04_api.md` — `api/profile/route.ts` (GET/PUT)
+- [x] `05_profile_page.md` — trang `/profile` (UI + geocode + save)
+- [x] `06_prefill_order.md` — `OrderForm` prop `initial` + `RestaurantModal` fetch + nav link
+- [x] `07_finalize.md` — lint/test/build + PR
 
 ## MUST nhắc lại (AGENTS §3, §9)
 

@@ -1,5 +1,7 @@
 # 07 — Finalize (lint/test/build + PR)
 
+> Commit: <hash> — chore(profile): finalize ✅ (lint sạch · 146 test xanh · build OK · PR mở)
+
 ## Vì sao
 
 Chốt feature: xanh CI cục bộ trước khi mở PR (AGENTS §7).
