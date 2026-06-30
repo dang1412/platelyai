@@ -1,6 +1,6 @@
 # 07 — Finalize (lint/test/build + PR)
 
-> Commit: <hash> — chore(profile): finalize ✅ (lint sạch · 146 test xanh · build OK · PR mở)
+> Commit: 74b9fa0 — chore(profile): finalize ✅ (lint sạch · 146 test xanh · build OK · PR mở)
 
 ## Vì sao
 
