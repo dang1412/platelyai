@@ -58,6 +58,11 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
 
   const step = nextSellerStep(order);
   const rejectable = canReject(order);
+  // Lý do từ chối đã nhập (note của event 'rejected' gần nhất) — hiện lại để seller xem.
+  const rejectReason =
+    order.status === "rejected"
+      ? order.events.filter((e) => e.status === "rejected").at(-1)?.note
+      : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -93,6 +98,13 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
           <p className="text-sm text-muted-foreground">Đơn đã kết thúc.</p>
         )}
       </div>
+
+      {order.status === "rejected" && (
+        <p className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">Lý do từ chối:</span>{" "}
+          {rejectReason ?? "(không ghi lý do)"}
+        </p>
+      )}
 
       {/* Form lý do từ chối */}
       {rejectable && rejecting && (
