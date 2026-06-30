@@ -13,6 +13,9 @@ import type { Order, OrderStatus } from "@/lib/orders/types";
 export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
   const [order, setOrder] = useState(initialOrder);
   const [acting, setActing] = useState(false);
+  // Form lý do từ chối (mở khi bấm "Từ chối"); lý do gửi kèm làm note của event 'rejected'.
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
   const id = order.id;
 
   // Refetch khi có event của đơn này (vd buyer huỷ) — set state trong promise-chain.
@@ -32,17 +35,19 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
     setOrder((prev) => (prev ? { ...prev, status: payload.status as OrderStatus } : prev));
   });
 
-  const act = async (toStatus: OrderStatus) => {
+  const act = async (toStatus: OrderStatus, note?: string) => {
     setActing(true);
     try {
       const res = await fetch(`/api/orders/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toStatus }),
+        body: JSON.stringify({ toStatus, note }),
       });
       if (res.ok) {
         const data = (await res.json()) as { order: Order };
         setOrder(data.order);
+        setRejecting(false);
+        setReason("");
       }
     } catch {
       // bỏ qua — stream/refetch đồng bộ lại
@@ -74,11 +79,11 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
             {step.label}
           </button>
         )}
-        {rejectable && (
+        {rejectable && !rejecting && (
           <button
             type="button"
             disabled={acting}
-            onClick={() => act("rejected")}
+            onClick={() => setRejecting(true)}
             className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-50"
           >
             Từ chối
@@ -88,6 +93,41 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
           <p className="text-sm text-muted-foreground">Đơn đã kết thúc.</p>
         )}
       </div>
+
+      {/* Form lý do từ chối */}
+      {rejectable && rejecting && (
+        <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+          <label className="text-sm font-medium text-foreground">Lý do từ chối</label>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={2}
+            placeholder="VD: hết món, ngoài giờ phục vụ, ngoài khu vực giao… (tuỳ chọn)"
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={acting}
+              onClick={() => act("rejected", reason.trim() || undefined)}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-hover disabled:opacity-50"
+            >
+              Xác nhận từ chối
+            </button>
+            <button
+              type="button"
+              disabled={acting}
+              onClick={() => {
+                setRejecting(false);
+                setReason("");
+              }}
+              className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-50"
+            >
+              Huỷ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
