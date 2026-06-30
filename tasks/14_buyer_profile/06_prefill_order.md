@@ -1,5 +1,7 @@
 # 06 — Prefill form đặt món + nav link
 
+> Commit: 4ba5e82 — feat(profile): prefill OrderForm + RestaurantModal fetch + nav link ✅
+
 ## Vì sao
 
 Mục tiêu chính của feature: khi đặt món, SĐT/địa chỉ đã lưu được điền sẵn (vẫn sửa được).
