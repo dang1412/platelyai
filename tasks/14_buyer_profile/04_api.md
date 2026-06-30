@@ -1,5 +1,7 @@
 # 04 — API route /api/profile (GET/PUT)
 
+> Commit: 3eadde2 — feat(profile): API route GET/PUT /api/profile ✅
+
 ## Vì sao
 
 Endpoint cho trang profile load + lưu; cũng được form đặt món gọi để prefill.
