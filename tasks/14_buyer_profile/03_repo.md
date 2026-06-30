@@ -1,5 +1,7 @@
 # 03 — Repo: get/upsert profile
 
+> Commit: aa285cb — feat(profile): repo get/upsert ✅ (+ integration test DB thật, 3 test xanh)
+
 ## Vì sao
 
 Tách lớp dữ liệu (SQL tham số hoá) khỏi route. Theo mẫu `src/lib/orders/repo.ts`.
