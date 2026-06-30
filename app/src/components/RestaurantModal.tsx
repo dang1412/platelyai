@@ -30,22 +30,28 @@ export default function RestaurantModal({
   const [submitting, setSubmitting] = useState(false);
   // Thông tin đã lưu của buyer để prefill form (null = chưa/không có; vẫn sửa được).
   const [profile, setProfile] = useState<OrderInitial | null>(null);
+  // Chờ fetch xong mới render OrderForm — form đọc `initial` ở useState init nên phải có sẵn
+  // trước khi mount (nếu render sớm rồi profile mới về, form đã khởi tạo rỗng → không điền sẵn).
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const router = useRouter();
 
   // Tải thông tin buyer 1 lần khi vào chế độ đặt món (cả deep-link /order/<id>). Lỗi → bỏ qua.
   useEffect(() => {
-    if (!ordering || profile) return;
+    if (!ordering || profileLoaded) return;
     let active = true;
     fetch("/api/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((d: { profile?: OrderInitial } | null) => {
         if (active && d?.profile) setProfile(d.profile);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setProfileLoaded(true);
+      });
     return () => {
       active = false;
     };
-  }, [ordering, profile]);
+  }, [ordering, profileLoaded]);
 
   // Submit form đặt món: POST /api/orders → điều hướng sang trang theo dõi với id đơn thật.
   const submitOrder = async (draft: OrderDraft) => {
@@ -205,16 +211,20 @@ export default function RestaurantModal({
                 {orderError}
               </p>
             )}
-            <OrderForm
-              restaurantId={r.id}
-              menu={detail.menu}
-              restaurantCoords={
-                r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null
-              }
-              initial={profile}
-              onSubmit={submitOrder}
-              onCancel={() => setOrdering(false)}
-            />
+            {!profileLoaded ? (
+              <p className="text-sm text-muted-foreground">Đang tải thông tin…</p>
+            ) : (
+              <OrderForm
+                restaurantId={r.id}
+                menu={detail.menu}
+                restaurantCoords={
+                  r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null
+                }
+                initial={profile}
+                onSubmit={submitOrder}
+                onCancel={() => setOrdering(false)}
+              />
+            )}
             {submitting && (
               <p className="text-center text-sm text-muted-foreground">Đang đặt món…</p>
             )}
