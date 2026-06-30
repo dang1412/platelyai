@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { mapUrl, type RestaurantDetail } from "@/lib/types";
 import { OrderForm, type OrderDraft, type OrderInitial } from "@/components/OrderForm";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { useRouter } from "next/navigation";
 
 function formatPrice(price: number | null): string {
@@ -183,13 +184,16 @@ export default function RestaurantModal({
               </p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Đóng"
-            className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            ✕
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {r && <FavoriteButton restaurantId={r.id} />}
+            <button
+              onClick={onClose}
+              aria-label="Đóng"
+              className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {loading && !detail ? (
