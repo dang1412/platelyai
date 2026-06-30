@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { mapUrl, type RestaurantDetail } from "@/lib/types";
-import { OrderForm, type OrderDraft } from "@/components/OrderForm";
+import { OrderForm, type OrderDraft, type OrderInitial } from "@/components/OrderForm";
 import { useRouter } from "next/navigation";
 
 function formatPrice(price: number | null): string {
@@ -28,7 +28,24 @@ export default function RestaurantModal({
   const [ordering, setOrdering] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Thông tin đã lưu của buyer để prefill form (null = chưa/không có; vẫn sửa được).
+  const [profile, setProfile] = useState<OrderInitial | null>(null);
   const router = useRouter();
+
+  // Tải thông tin buyer 1 lần khi vào chế độ đặt món (cả deep-link /order/<id>). Lỗi → bỏ qua.
+  useEffect(() => {
+    if (!ordering || profile) return;
+    let active = true;
+    fetch("/api/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d: { profile?: OrderInitial } | null) => {
+        if (active && d?.profile) setProfile(d.profile);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [ordering, profile]);
 
   // Submit form đặt món: POST /api/orders → điều hướng sang trang theo dõi với id đơn thật.
   const submitOrder = async (draft: OrderDraft) => {
@@ -194,6 +211,7 @@ export default function RestaurantModal({
               restaurantCoords={
                 r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null
               }
+              initial={profile}
               onSubmit={submitOrder}
               onCancel={() => setOrdering(false)}
             />

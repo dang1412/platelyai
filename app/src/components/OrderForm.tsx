@@ -21,10 +21,19 @@ export type OrderDraft = {
   note: string | null;
 };
 
+// Giá trị điền sẵn từ thông tin đã lưu của buyer (plan 14). Mọi field optional.
+export type OrderInitial = {
+  phone: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+};
+
 type Props = {
   restaurantId: number;
   menu: MenuCategory[];
   restaurantCoords?: LatLng | null; // toạ độ quán để gate bán kính giao
+  initial?: OrderInitial | null; // prefill SĐT/địa chỉ đã lưu (vẫn sửa được)
   onSubmit: (draft: OrderDraft) => void;
   onCancel: () => void;
 };
@@ -42,6 +51,7 @@ export function OrderForm({
   restaurantId,
   menu,
   restaurantCoords,
+  initial,
   onSubmit,
   onCancel,
 }: Props) {
@@ -67,13 +77,18 @@ export function OrderForm({
 
   const [qty, setQty] = useState<Record<string, number>>({});
   const [fulfillment, setFulfillment] = useState<Fulfillment>("delivery");
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [phone, setPhone] = useState(initial?.phone ?? "");
   const [note, setNote] = useState("");
   const [showErrors, setShowErrors] = useState(false);
 
-  // Kiểm tra địa chỉ qua Google (geocode) — toạ độ + lỗi.
-  const [geo, setGeo] = useState<LatLng | null>(null);
+  // Kiểm tra địa chỉ qua Google (geocode) — toạ độ + lỗi. Prefill toạ độ đã lưu để gate bán
+  // kính chạy ngay (khỏi bắt bấm "Kiểm tra địa chỉ" lại) khi địa chỉ đến từ thông tin đã lưu.
+  const [geo, setGeo] = useState<LatLng | null>(
+    initial?.lat != null && initial?.lng != null
+      ? { lat: initial.lat, lng: initial.lng }
+      : null,
+  );
   const [geoErr, setGeoErr] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 

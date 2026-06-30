@@ -243,6 +243,17 @@ export default function AuthButton() {
               </Icon>
             }
           />
+          <NavLink
+            href="/profile"
+            label="Thông tin của tôi"
+            onNavigate={() => setOpen(false)}
+            icon={
+              <Icon>
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+              </Icon>
+            }
+          />
 
           {/* Phần quản trị — chỉ chủ quán / admin */}
           {isStaff && (
