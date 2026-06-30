@@ -1,5 +1,8 @@
 # 05 — Realtime bus: Postgres LISTEN/NOTIFY + fan-out
 
+> Commit: 7977f57 — feat(orders): realtime bus LISTEN/NOTIFY + fan-out; repo dùng notifyOrder từ bus (+ integration test) ✅
+> Fan-out: buyer + owner của quán (admin xem qua refetch khi mở tab — chưa fan-out tới admin, ghi mở rộng).
+
 ## Vì sao
 Cần lớp đẩy tín hiệu "đơn X đổi trạng thái" tới đúng buyer/seller đang mở tab, không polling.
 Postgres `LISTEN/NOTIFY` cho fan-out đa-instance miễn phí (mỗi instance 1 kết nối LISTEN tới

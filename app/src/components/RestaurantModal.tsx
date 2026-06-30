@@ -26,18 +26,34 @@ export default function RestaurantModal({
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [ordering, setOrdering] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  // Submit form đặt món (mock): cất draft vào sessionStorage rồi sang trang theo dõi.
-  // TODO(plan 10): POST lên API, dùng id đơn thật do server trả về.
-  const submitOrder = (draft: OrderDraft) => {
-    const id = `mock-${Date.now()}`;
+  // Submit form đặt món: POST /api/orders → điều hướng sang trang theo dõi với id đơn thật.
+  const submitOrder = async (draft: OrderDraft) => {
+    setOrderError(null);
+    setSubmitting(true);
     try {
-      sessionStorage.setItem(`order-draft:${id}`, JSON.stringify(draft));
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.id) {
+        setOrderError(data.error ?? "Đặt món thất bại.");
+        return;
+      }
+      router.push(`/orders/${data.id}`);
     } catch {
-      // sessionStorage bị chặn — bỏ qua, trang theo dõi sẽ fallback mock.
+      setOrderError("Lỗi mạng khi đặt món.");
+    } finally {
+      setSubmitting(false);
     }
-    router.push(`/orders/${id}`);
   };
 
   // Mở form đặt món inline + đổi URL sang /order/<id> (deep-link; reload ra trang riêng thật).
@@ -167,8 +183,13 @@ export default function RestaurantModal({
             <h3 className="text-lg font-semibold text-foreground">
               Đặt món · {r.name}
             </h3>
+            {orderError && (
+              <p className="rounded-lg border border-brand bg-brand/10 px-3 py-2 text-sm text-brand">
+                {orderError}
+              </p>
+            )}
             <OrderForm
-              restaurantName={r.name}
+              restaurantId={r.id}
               menu={detail.menu}
               restaurantCoords={
                 r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null
@@ -176,6 +197,9 @@ export default function RestaurantModal({
               onSubmit={submitOrder}
               onCancel={() => setOrdering(false)}
             />
+            {submitting && (
+              <p className="text-center text-sm text-muted-foreground">Đang đặt món…</p>
+            )}
           </div>
         ) : r ? (
           <div className="space-y-6 p-5">

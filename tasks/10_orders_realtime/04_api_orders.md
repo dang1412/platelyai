@@ -1,5 +1,7 @@
 # 04 — API routes đơn hàng (REST)
 
+> Commit: 719c7ba — feat(orders): API routes — orders POST/GET, [id] GET, status PATCH, seller/orders GET ✅ (build OK; E2E có session verify ở task 09)
+
 ## Vì sao
 Lộ repo ra HTTP cho client. Route mỏng: validate-at-the-edge → authz → gọi repo → trả JSON.
 Theo pattern các route admin hiện có (`getCurrentUser` + `authzResponse`/`validationResponse`).

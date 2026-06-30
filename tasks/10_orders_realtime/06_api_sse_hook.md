@@ -1,5 +1,7 @@
 # 06 — SSE endpoint + client hook
 
+> Commit: 95eab2c — feat(orders): SSE endpoint /api/orders/stream + hook useOrderStream ✅ (build OK; live SSE verify ở task 09)
+
 ## Vì sao
 Đưa tín hiệu từ bus (task 05) xuống browser qua Server-Sent Events (1 chiều server→client, đủ
 cho thông báo, nhẹ hơn WebSocket). Client nhận tín hiệu → **refetch** trạng thái chuẩn (DB là

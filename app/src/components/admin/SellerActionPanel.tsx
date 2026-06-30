@@ -1,17 +1,56 @@
-// Panel thao tác seller cho 1 đơn (feature 13 — mock). Giữ trạng thái đơn ở local state và mô phỏng
-// nhận/từ chối/đẩy trạng thái. "use client" — chưa có backend/SSE (plan 10 thay bằng PATCH + refetch).
+// Panel thao tác seller cho 1 đơn (plan 10): PATCH trạng thái thật + đồng bộ realtime qua SSE.
+// "use client" — cần fetch + EventSource.
 
 "use client";
 
 import { useState } from "react";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline";
-import { simulateAdvance, simulateReject } from "@/lib/orders/mock";
+import { useOrderStream } from "@/lib/useOrderStream";
 import { canReject, nextSellerStep } from "@/lib/orders/sellerActions";
-import type { Order } from "@/lib/orders/types";
+import type { Order, OrderStatus } from "@/lib/orders/types";
 
 export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
   const [order, setOrder] = useState(initialOrder);
+  const [acting, setActing] = useState(false);
+  const id = order.id;
+
+  // Refetch khi có event của đơn này (vd buyer huỷ) — set state trong promise-chain.
+  const refetch = () => {
+    fetch(`/api/orders/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { order: Order } | null) => d && setOrder(d.order))
+      .catch(() => {});
+  };
+  // Patch status từ payload (0 request); reconnect (payload rỗng) → full refetch bù lỡ.
+  useOrderStream((payload) => {
+    if (!payload) {
+      refetch();
+      return;
+    }
+    if (String(payload.orderId) !== id) return;
+    setOrder((prev) => (prev ? { ...prev, status: payload.status as OrderStatus } : prev));
+  });
+
+  const act = async (toStatus: OrderStatus) => {
+    setActing(true);
+    try {
+      const res = await fetch(`/api/orders/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toStatus }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { order: Order };
+        setOrder(data.order);
+      }
+    } catch {
+      // bỏ qua — stream/refetch đồng bộ lại
+    } finally {
+      setActing(false);
+    }
+  };
+
   const step = nextSellerStep(order);
   const rejectable = canReject(order);
 
@@ -28,8 +67,9 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
         {step && (
           <button
             type="button"
-            onClick={() => setOrder(simulateAdvance(order))}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-hover"
+            disabled={acting}
+            onClick={() => act(step.toStatus)}
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-hover disabled:opacity-50"
           >
             {step.label}
           </button>
@@ -37,8 +77,9 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
         {rejectable && (
           <button
             type="button"
-            onClick={() => setOrder(simulateReject(order))}
-            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-muted"
+            disabled={acting}
+            onClick={() => act("rejected")}
+            className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-surface-muted disabled:opacity-50"
           >
             Từ chối
           </button>

@@ -1,11 +1,13 @@
-// Chi tiết 1 đơn cho seller (feature 13 — mock). Server đọc mock; phần thao tác ở SellerActionPanel.
-// Next 16: params là Promise — phải await. Quyền đã guard ở admin/layout.tsx.
+// Chi tiết 1 đơn cho seller (plan 10). Server đọc đơn thật + kiểm quyền; thao tác ở SellerActionPanel.
+// Next 16: params là Promise — phải await. Quyền vào /admin đã guard ở admin/layout.tsx.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getCurrentUser } from "@/lib/authz";
+import { getOrderAuth, getOrderFull } from "@/lib/orders/repo";
+import { canViewOrder } from "@/lib/orders/authz";
 import { OrderSummary } from "@/components/OrderSummary";
 import { SellerActionPanel } from "@/components/admin/SellerActionPanel";
-import { getMockOrder } from "@/lib/orders/mock";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -13,10 +15,14 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  // Validate-at-the-edge: id phải là chuỗi không rỗng.
-  if (!id.trim()) notFound();
-  const order = getMockOrder(id);
-  if (!order) notFound();
+  // Validate-at-the-edge: id phải là số nguyên dương.
+  const orderId = Number(id);
+  if (!Number.isInteger(orderId) || orderId <= 0) notFound();
+
+  const user = (await getCurrentUser())!;
+  const auth = await getOrderAuth(orderId);
+  if (!auth || !(await canViewOrder(user, auth))) notFound();
+  const order = (await getOrderFull(orderId))!;
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-6">

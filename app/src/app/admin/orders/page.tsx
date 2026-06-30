@@ -1,10 +1,12 @@
-// Dashboard đơn cho seller (feature 13 — mock). Server component: đọc mock, lọc theo quán, nhóm
-// theo trạng thái. Quyền đã guard ở admin/layout.tsx. Plan 10 thay mock bằng đơn thật của quán canEdit.
+// Dashboard đơn cho seller (plan 10). Server component: đọc đơn thật của quán seller quản lý,
+// nhóm theo trạng thái, lọc theo quán. Realtime qua SellerOrdersRefresher (SSE → router.refresh).
 
 import Link from "next/link";
-import { SellerOrderRow } from "@/components/admin/SellerOrderRow";
-import { listMockOrders, restaurantNames } from "@/lib/orders/mock";
+import { getCurrentUser, listEditableRestaurants } from "@/lib/authz";
+import { listOrdersForSeller } from "@/lib/orders/repo";
 import { groupSellerOrders } from "@/lib/orders/sellerActions";
+import { SellerOrderRow } from "@/components/admin/SellerOrderRow";
+import { SellerOrdersRefresher } from "@/components/admin/SellerOrdersRefresher";
 import type { Order } from "@/lib/orders/types";
 
 export default async function AdminOrdersPage({
@@ -13,18 +15,20 @@ export default async function AdminOrdersPage({
   searchParams: Promise<{ restaurant?: string }>;
 }) {
   const sp = await searchParams;
-  // Validate-at-the-edge: chỉ nhận chuỗi; rỗng = tất cả quán.
-  const restaurant = typeof sp.restaurant === "string" ? sp.restaurant.trim() : "";
+  // Validate-at-the-edge: chỉ nhận id số; rỗng/không hợp lệ = tất cả quán.
+  const restaurantId =
+    typeof sp.restaurant === "string" && /^\d+$/.test(sp.restaurant)
+      ? Number(sp.restaurant)
+      : undefined;
 
-  const all = listMockOrders();
-  const filtered = restaurant
-    ? all.filter((o) => o.restaurantName === restaurant)
-    : all;
-  const { needsAction, inProgress, done } = groupSellerOrders(filtered);
-  const restaurants = restaurantNames(all);
+  const user = (await getCurrentUser())!; // admin/layout đã đảm bảo đăng nhập + role
+  const orders = await listOrdersForSeller(user, restaurantId);
+  const { needsAction, inProgress, done } = groupSellerOrders(orders);
+  const restaurants = await listEditableRestaurants(user, "");
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col p-6">
+      <SellerOrdersRefresher />
       <header className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-foreground">Quản lý đơn</h1>
         <Link href="/admin" className="text-sm text-muted-foreground underline">
@@ -36,13 +40,13 @@ export default async function AdminOrdersPage({
       <form method="get" className="mb-6 flex gap-2">
         <select
           name="restaurant"
-          defaultValue={restaurant}
+          defaultValue={restaurantId ? String(restaurantId) : ""}
           className="flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-brand"
         >
           <option value="">Tất cả quán</option>
-          {restaurants.map((name) => (
-            <option key={name} value={name}>
-              {name}
+          {restaurants.map((r) => (
+            <option key={r.id} value={String(r.id)}>
+              {r.name}
             </option>
           ))}
         </select>

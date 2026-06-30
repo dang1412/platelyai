@@ -34,6 +34,7 @@ export type OrderEvent = {
 // Một đơn hàng đầy đủ để render phía buyer.
 export type Order = {
   id: string;
+  restaurantId: string; // id quán (seller lọc theo quán); thêm ở plan 10
   restaurantName: string;
   fulfillment: Fulfillment;
   status: OrderStatus;

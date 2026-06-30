@@ -6,22 +6,23 @@
 
 import { useMemo, useState } from "react";
 import { haversineMeters } from "@/lib/geo";
-import type { Fulfillment, OrderItem } from "@/lib/orders/types";
+import type { Fulfillment } from "@/lib/orders/types";
 import type { LatLng, MenuCategory } from "@/lib/types";
 
-// Dữ liệu đơn buyer nhập (plan 10 sẽ POST payload này lên API).
+// Payload đặt món gửi thẳng lên POST /api/orders (giá tính lại server-side).
 export type OrderDraft = {
-  restaurantName: string;
+  restaurantId: number;
   fulfillment: Fulfillment;
-  items: OrderItem[];
-  total: number;
+  items: { menuItemId: number; quantity: number }[];
   phone: string;
-  address?: string | null;
-  note?: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  note: string | null;
 };
 
 type Props = {
-  restaurantName: string;
+  restaurantId: number;
   menu: MenuCategory[];
   restaurantCoords?: LatLng | null; // toạ độ quán để gate bán kính giao
   onSubmit: (draft: OrderDraft) => void;
@@ -38,7 +39,7 @@ const PHONE_RE = /^0\d{9}$/;
 const MAX_DELIVERY_M = 1000;
 
 export function OrderForm({
-  restaurantName,
+  restaurantId,
   menu,
   restaurantCoords,
   onSubmit,
@@ -52,7 +53,12 @@ export function OrderForm({
           name: cat.categoryName,
           rows: cat.items
             .filter((it) => it.price != null)
-            .map((it, ii) => ({ key: `${ci}-${ii}`, name: it.name, price: it.price as number })),
+            .map((it, ii) => ({
+              key: `${ci}-${ii}`,
+              id: it.id,
+              name: it.name,
+              price: it.price as number,
+            })),
         }))
         .filter((g) => g.rows.length > 0),
     [menu],
@@ -104,9 +110,9 @@ export function OrderForm({
   };
 
 
-  const selected: OrderItem[] = rows
+  const selected = rows
     .filter((r) => (qty[r.key] ?? 0) > 0)
-    .map((r) => ({ name: r.name, price: r.price, quantity: qty[r.key] }));
+    .map((r) => ({ menuItemId: r.id, price: r.price, quantity: qty[r.key] }));
   const total = selected.reduce((s, it) => s + it.price * it.quantity, 0);
 
   // Khoảng cách tới quán (m) khi đã geocode được địa chỉ + biết toạ độ quán.
@@ -138,12 +144,13 @@ export function OrderForm({
       return;
     }
     onSubmit({
-      restaurantName,
+      restaurantId,
       fulfillment,
-      items: selected,
-      total,
+      items: selected.map((s) => ({ menuItemId: s.menuItemId, quantity: s.quantity })),
       phone: phone.trim(),
       address: fulfillment === "delivery" ? address.trim() : null,
+      lat: fulfillment === "delivery" ? (geo?.lat ?? null) : null,
+      lng: fulfillment === "delivery" ? (geo?.lng ?? null) : null,
       note: note.trim() || null,
     });
   };
