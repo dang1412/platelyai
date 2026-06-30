@@ -81,7 +81,8 @@ Không thêm thông tin ngoài câu.`;
 }
 
 // Gọi Gemini rồi đưa JSON thô vào parseExtraction. Thiếu key / lỗi / parse fail → fallback
-// (downstream rơi vào nhánh QUÁN, rank theo rating — không vỡ).
+// (downstream rơi vào nhánh QUÁN, rank theo rating — không vỡ). Trả thêm `error`: message lỗi khi
+// gọi LLM fail (null nếu không lỗi) để route ghi vào search log (plan 16); search vẫn không vỡ.
 //
 // Cache in-memory theo (q + vocab) qua getOrCompute (plan 08): cùng câu hỏi không gọi lại Gemini
 // (ca bật/tắt vị trí re-fetch cùng q; chống "high demand" do trùng lặp/đông người). compute trả
@@ -89,10 +90,15 @@ Không thêm thông tin ngoài câu.`;
 export async function extractQuery(
   q: string,
   vocabTags: string[],
-): Promise<ParsedQuery> {
-  if (!process.env.GEMINI_API_KEY || !q.trim()) return fallback();
+): Promise<{ parsed: ParsedQuery; error: string | null }> {
+  if (!process.env.GEMINI_API_KEY || !q.trim()) {
+    return { parsed: fallback(), error: null };
+  }
   const apiKey = process.env.GEMINI_API_KEY;
   const key = buildKey(q, vocabTags);
+
+  // Lỗi gọi LLM bắt trong compute; lưu ra ngoài để trả về (compute chỉ trả null/parsed cho cache).
+  let error: string | null = null;
 
   const result = await getOrCompute(key, async () => {
     try {
@@ -122,9 +128,10 @@ export async function extractQuery(
       return parseExtraction(JSON.parse(text) as RawExtraction, vocabTags);
     } catch (e) {
       console.error("extractQuery failed:", e);
+      error = e instanceof Error ? e.message : String(e);
       return null; // lỗi → KHÔNG cache
     }
   });
 
-  return result ?? fallback();
+  return { parsed: result ?? fallback(), error };
 }

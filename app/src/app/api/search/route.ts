@@ -7,7 +7,12 @@ import {
   candidatesNearbyOrTop,
 } from "@/lib/candidates";
 import { rerank } from "@/lib/rank";
+import { getCurrentUser } from "@/lib/authz";
+import { appendSearchLog } from "@/lib/searchLog";
 import type { LatLng, SearchResponse } from "@/lib/types";
+
+// fs để ghi search log theo ngày (plan 16) cần Node runtime.
+export const runtime = "nodejs";
 
 // GET /api/search?q=<câu tự nhiên>[&lat=&lng=]
 // Một luồng duy nhất (plan 01 §3): extract → origin → candidates (MÓN/QUÁN) → rerank.
@@ -16,9 +21,9 @@ export async function GET(request: NextRequest): Promise<Response> {
   const q = params.get("q")?.trim() ?? "";
   const coords = coordsFromParams(params);
 
-  // [1] PARSE — vocab tag nạp từ DB (cache) để validate yếu tố tags.
+  // [1] PARSE — vocab tag nạp từ DB (cache) để validate yếu tố tags. error = lỗi gọi LLM (ghi log).
   const vocab = await loadTagVocab();
-  const parsed = await extractQuery(q, vocab);
+  const { parsed, error } = await extractQuery(q, vocab);
 
   // [2] ORIGIN — toạ độ thiết bị thắng; không có thì geocode location trong câu.
   const origin: LatLng | null =
@@ -32,6 +37,21 @@ export async function GET(request: NextRequest): Promise<Response> {
 
   // [4] RANK — wantsCheap bơm cheapness, tags cộng điểm trùng tag quán.
   const results = rerank(candidates, parsed.wantsCheap, parsed.tags);
+
+  // [5] LOG — fire-and-forget ra file theo ngày (plan 16). Không await để khỏi trì hoãn response;
+  // appendSearchLog tự nuốt lỗi nên không làm vỡ search. Không lộ `error` ra client.
+  const userId = (await getCurrentUser())?.id ?? null;
+  void appendSearchLog({
+    ts: new Date().toISOString(),
+    userId,
+    q,
+    location: parsed.location,
+    deviceCoords: coords,
+    origin,
+    parsed,
+    resultCount: results.length,
+    error,
+  });
 
   return Response.json({ parsed, results } satisfies SearchResponse);
 }

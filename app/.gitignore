@@ -20,6 +20,9 @@
 # production
 /build
 
+# search log (file JSONL theo ngày — plan 16)
+/logs
+
 # misc
 .DS_Store
 *.pem

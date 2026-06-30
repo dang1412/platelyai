@@ -100,7 +100,8 @@ describe("extractQuery cache", () => {
     const a = await extractQuery("phở bò", []);
     const b = await extractQuery("phở bò", []);
     expect(generateContentMock).toHaveBeenCalledTimes(1);
-    expect(a.dishes).toEqual(["phở bò"]);
+    expect(a.parsed.dishes).toEqual(["phở bò"]);
+    expect(a.error).toBeNull();
     expect(b).toEqual(a);
   });
 
@@ -116,10 +117,12 @@ describe("extractQuery cache", () => {
       .mockRejectedValueOnce(new Error("503 overloaded"))
       .mockResolvedValueOnce(ok({ dishes: ["bún"], tags: [], wants_cheap: false }));
     const a = await extractQuery("bún chả", []);
-    expect(a.dishes).toEqual([]); // fallback
+    expect(a.parsed.dishes).toEqual([]); // fallback
+    expect(a.error).toBe("503 overloaded"); // lỗi LLM được surface ra để ghi log
     const b = await extractQuery("bún chả", []);
     expect(generateContentMock).toHaveBeenCalledTimes(2);
-    expect(b.dishes).toEqual(["bún"]);
+    expect(b.parsed.dishes).toEqual(["bún"]);
+    expect(b.error).toBeNull();
   });
 
   it("vocab khác → key khác → gọi Gemini lại", async () => {
