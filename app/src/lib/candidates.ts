@@ -24,7 +24,8 @@ const CHEAP_REF = 40000; // mốc chuẩn hoá cheapness (plan 01 §5)
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 // Cột chung cho summary (kèm tag vibe của quán). distanceM thêm riêng khi có origin.
-const REST_COLS = `r.id, r.name, r.address,
+// Export để module khác (vd favorites) dựng RestaurantSummary cùng hình dạng, khỏi lặp.
+export const REST_COLS = `r.id, r.name, r.address,
   r.rating       AS "rating",
   r.rating_count AS "ratingCount",
   (SELECT array_agg(t.name)
@@ -33,7 +34,7 @@ const REST_COLS = `r.id, r.name, r.address,
   r.website,
   r.google_place_id AS "googlePlaceId"`;
 
-function toSummary(r: Record<string, unknown>): RestaurantSummary {
+export function toSummary(r: Record<string, unknown>): RestaurantSummary {
   return {
     id: Number(r.id),
     name: r.name as string,

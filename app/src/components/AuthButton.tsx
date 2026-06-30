@@ -244,6 +244,16 @@ export default function AuthButton() {
             }
           />
           <NavLink
+            href="/favorites"
+            label="Quán yêu thích"
+            onNavigate={() => setOpen(false)}
+            icon={
+              <Icon>
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A3.5 3.5 0 0 0 18.5 5c-1.74 0-3 .5-4.5 2-1.5-1.5-2.76-2-4.5-2A3.5 3.5 0 0 0 6 8.5c0 2.29 1.51 4.04 3 5.5l5 5Z" />
+              </Icon>
+            }
+          />
+          <NavLink
             href="/profile"
             label="Thông tin của tôi"
             onNavigate={() => setOpen(false)}
