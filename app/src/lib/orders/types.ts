@@ -42,6 +42,8 @@ export type Order = {
   total: number; // VND, tổng đã tính
   phone: string;
   address?: string | null; // chỉ có khi delivery
+  lat?: number | null; // toạ độ giao (bắt buộc khi delivery) — mở bản đồ không cần geocode lại
+  lng?: number | null;
   note?: string | null;
   events: OrderEvent[];
   createdAt: string;
