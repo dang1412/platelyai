@@ -1,7 +1,8 @@
 // Tóm tắt nội dung đơn — danh sách món × SL, tổng tiền, kiểu nhận hàng, SDT.
-// Presentational thuần: nhận props, không fetch.
+// Presentational; phần "Kiểm tra toạ độ → mở bản đồ" tách ra AddressMapLink (client).
 
 import type { Fulfillment, OrderItem } from "@/lib/orders/types";
+import { AddressMapLink } from "@/components/AddressMapLink";
 
 // Định dạng giá VND (như RestaurantModal).
 function formatPrice(price: number): string {
@@ -48,7 +49,9 @@ export function OrderSummary({ items, total, fulfillment, phone, address }: Prop
         {fulfillment === "delivery" && address && (
           <div className="flex gap-2">
             <dt>Địa chỉ:</dt>
-            <dd className="text-foreground">{address}</dd>
+            <dd className="text-foreground">
+              {address} <AddressMapLink address={address} />
+            </dd>
           </div>
         )}
         <div className="flex gap-2">

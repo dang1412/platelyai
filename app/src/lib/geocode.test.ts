@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { parseGeocodeResponse, geocode, _resetGeocodeCache } from "./geocode";
+import { parseGeocodeResponse, geocode, _resetGeocodeCache, CACHE_MAX } from "./geocode";
 
 describe("parseGeocodeResponse", () => {
   it("đọc toạ độ địa điểm đầu tiên", () => {
@@ -60,6 +60,25 @@ describe("geocode", () => {
     expect(await geocode("Vincom Bà Triệu")).toEqual({ lat: 21.0, lng: 105.8 });
     expect(await geocode("Vincom Bà Triệu")).toEqual({ lat: 21.0, lng: 105.8 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("vượt CACHE_MAX → xoá key cũ nhất (LRU)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(okResponse(1, 1));
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Điền đầy cache (CACHE_MAX key khác nhau).
+    for (let i = 0; i < CACHE_MAX; i++) await geocode(`addr ${i}`);
+    expect(fetchMock).toHaveBeenCalledTimes(CACHE_MAX);
+
+    // "addr 0" còn trong cache → đọc lại không fetch, đồng thời bump lên mới nhất.
+    await geocode("addr 0");
+    expect(fetchMock).toHaveBeenCalledTimes(CACHE_MAX);
+
+    // Thêm 1 key mới → vượt giới hạn, đẩy key cũ nhất (giờ là "addr 1") ra.
+    await geocode(`addr ${CACHE_MAX}`);
+    // "addr 1" đã bị evict → phải fetch lại.
+    await geocode("addr 1");
+    expect(fetchMock).toHaveBeenCalledTimes(CACHE_MAX + 2);
   });
 
   it("response !ok → null", async () => {

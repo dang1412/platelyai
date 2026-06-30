@@ -6,8 +6,20 @@ import type { LatLng } from "./types";
 
 const ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
 
-// Cache theo tên đã chuẩn hoá, sống trong vòng đời process.
+// Cache theo tên đã chuẩn hoá, sống trong vòng đời process (per-process; nâng Redis sau nếu cần).
+// Bao gồm cả kết quả null (không tìm thấy / lỗi) để khỏi gọi lại Google liên tục.
+// Giới hạn số item: Map giữ thứ tự chèn → LRU; vượt CACHE_MAX thì xoá key cũ nhất (đầu Map).
+export const CACHE_MAX = 1000;
 const cache = new Map<string, LatLng | null>();
+
+function setCache(key: string, value: LatLng | null): void {
+  cache.delete(key); // nếu đã có, set lại để đẩy về cuối (mới nhất)
+  cache.set(key, value);
+  if (cache.size > CACHE_MAX) {
+    const oldest = cache.keys().next().value; // key đầu = cũ nhất
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+}
 
 type SearchTextResponse = {
   places?: { location?: { latitude?: number; longitude?: number } }[];
@@ -29,7 +41,11 @@ export function parseGeocodeResponse(data: SearchTextResponse): LatLng | null {
 export async function geocode(location: string): Promise<LatLng | null> {
   const key = location.trim().toLowerCase();
   if (!key) return null;
-  if (cache.has(key)) return cache.get(key)!;
+  if (cache.has(key)) {
+    const hit = cache.get(key)!;
+    setCache(key, hit); // bump recency
+    return hit;
+  }
 
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) return null;
@@ -48,16 +64,16 @@ export async function geocode(location: string): Promise<LatLng | null> {
 
     if (!res.ok) {
       console.error("geocode HTTP", res.status);
-      cache.set(key, null);
+      setCache(key, null);
       return null;
     }
 
     const result = parseGeocodeResponse((await res.json()) as SearchTextResponse);
-    cache.set(key, result);
+    setCache(key, result);
     return result;
   } catch (e) {
     console.error("geocode failed:", e);
-    cache.set(key, null);
+    setCache(key, null);
     return null;
   }
 }
