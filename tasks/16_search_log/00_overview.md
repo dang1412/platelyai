@@ -20,6 +20,8 @@ nếu gọi LLM extract fail** (field `error`).
 - [x] `04_wire_route.md` — sửa `search/route.ts`: `runtime="nodejs"` + destructure `{parsed,error}` + `appendSearchLog` fire-and-forget
 - [x] `05_finalize.md` — gitignore `/logs` + document `SEARCH_LOG_DIR`, lint + test + build xanh, mở PR
 
+Code: `0a2a454` (PR #28, lint + test + build xanh).
+
 ## Nhắc lại MUST (AGENTS.md)
 
 - **Không DB, không AI** trong feature này → không có vấn đề SQL injection; vẫn KHÔNG tạo Pool mới.
