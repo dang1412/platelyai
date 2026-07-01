@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { apiFetch } from "@/lib/apiFetch";
 
 export function FavoriteButton({ restaurantId }: { restaurantId: number }) {
   const { status } = useSession();
@@ -34,12 +35,12 @@ export function FavoriteButton({ restaurantId }: { restaurantId: number }) {
     const next = !fav;
     setFav(next); // optimistic
     try {
-      const res = await fetch("/api/favorites", {
+      const res = await apiFetch("/api/favorites", {
         method: next ? "POST" : "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ restaurantId }),
       });
-      if (!res.ok) setFav(!next); // rollback
+      if (!res.ok) setFav(!next); // rollback (apiFetch đã bắn toast lỗi)
     } catch {
       setFav(!next); // rollback
     } finally {

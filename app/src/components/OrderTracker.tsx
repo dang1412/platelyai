@@ -8,6 +8,7 @@ import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline";
 import { OrderSummary } from "@/components/OrderSummary";
 import { useOrderStream } from "@/lib/useOrderStream";
+import { apiFetch } from "@/lib/apiFetch";
 import type { Order, OrderStatus } from "@/lib/orders/types";
 
 // Banner nhắc buyer hành động khi đơn tới mốc cần nhận hàng.
@@ -65,7 +66,7 @@ export function OrderTracker({ id }: { id: string }) {
   const patch = async (toStatus: OrderStatus) => {
     setActing(true);
     try {
-      const res = await fetch(`/api/orders/${id}/status`, {
+      const res = await apiFetch(`/api/orders/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toStatus }),
