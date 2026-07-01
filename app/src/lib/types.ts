@@ -44,6 +44,9 @@ export type RestaurantSummary = {
 export type SearchResponse = {
   parsed: ParsedQuery | null; // null khi không trích được (query rỗng / fallback)
   results: RestaurantSummary[];
+  // true khi extract (gọi Gemini) lỗi → kết quả chạy chế độ degraded (rank theo rating).
+  // Chỉ là cờ, KHÔNG lộ message lỗi thô ra client. Client dùng để báo toast cho user.
+  extractFailed?: boolean;
 };
 
 // ── Chi tiết quán (/api/restaurants/:id) ─────────────────────────────────────

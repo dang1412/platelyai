@@ -6,6 +6,7 @@ import SearchBar from "@/components/SearchBar";
 import RestaurantCard, { fmtVnd } from "@/components/RestaurantCard";
 import RestaurantModal from "@/components/RestaurantModal";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useToast } from "@/lib/toast/useToast";
 import type {
   LatLng,
   ParsedQuery,
@@ -27,6 +28,7 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const { coords, status: geoStatus, request: requestGeo, clear: clearGeo } =
     useGeolocation();
+  const toast = useToast();
 
   // query đổi khi user commit (Enter/blur); coords đổi khi bật/tắt định vị.
   // Cả hai đều phải tải lại — gộp vào một effect, AbortController huỷ request cũ.
@@ -40,9 +42,13 @@ export default function Home() {
     setLoading(true);
     fetch(searchUrl(trimmed, coords), { signal: controller.signal })
       .then((r) => r.json() as Promise<SearchResponse>)
-      .then(({ parsed, results }) => {
+      .then(({ parsed, results, extractFailed }) => {
         setParsed(parsed);
         setResults(results);
+        // Gemini lỗi → search chạy degraded (rank theo rating); báo user biết.
+        if (extractFailed) {
+          toast.info("Chưa hiểu hết câu tìm kiếm, đang hiển thị kết quả gần đúng.");
+        }
       })
       .catch((e) => {
         if (e.name !== "AbortError") console.error(e);
@@ -50,7 +56,7 @@ export default function Home() {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [query, coords]);
+  }, [query, coords, toast]);
 
   // Mở/đóng modal chi tiết quán có đồng bộ URL (?quan=<id>) để chia sẻ được link.
   // pushState giữ history → nút back của trình duyệt sẽ đóng modal.

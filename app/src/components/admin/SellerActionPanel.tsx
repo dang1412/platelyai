@@ -7,6 +7,7 @@ import { useState } from "react";
 import { OrderStatusBadge } from "@/components/OrderStatusBadge";
 import { OrderStatusTimeline } from "@/components/OrderStatusTimeline";
 import { useOrderStream } from "@/lib/useOrderStream";
+import { apiFetch } from "@/lib/apiFetch";
 import { canReject, nextSellerStep } from "@/lib/orders/sellerActions";
 import type { Order, OrderStatus } from "@/lib/orders/types";
 
@@ -38,7 +39,7 @@ export function SellerActionPanel({ initialOrder }: { initialOrder: Order }) {
   const act = async (toStatus: OrderStatus, note?: string) => {
     setActing(true);
     try {
-      const res = await fetch(`/api/orders/${id}/status`, {
+      const res = await apiFetch(`/api/orders/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toStatus, note }),

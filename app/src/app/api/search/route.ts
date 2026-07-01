@@ -53,7 +53,12 @@ export async function GET(request: NextRequest): Promise<Response> {
     error,
   });
 
-  return Response.json({ parsed, results } satisfies SearchResponse);
+  // extractFailed: báo client hiện toast "câu chưa hiểu hết" (không lộ message lỗi thô).
+  return Response.json({
+    parsed,
+    results,
+    extractFailed: error !== null,
+  } satisfies SearchResponse);
 }
 
 // Toạ độ thiết bị từ ?lat=&lng= (client gửi khi bật định vị). null nếu thiếu/ngoài range.
