@@ -2,19 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { RestaurantForEdit } from "@/lib/adminRestaurant";
 import { adminFetch } from "./adminFetch";
 
-// Form thông tin quán dùng chung cho TẠO (mode="create") và SỬA (mode="edit").
-// - create: POST /api/admin/restaurants rồi chuyển sang trang sửa quán vừa tạo.
-// - edit:   PATCH /api/admin/restaurants/:id rồi refresh để server component tải lại.
-// Toạ độ có thể lấy tự động từ thiết bị qua Geolocation API.
+// Form thông tin quán dùng chung cho 3 luồng tạo/sửa quán:
+// - "create"      : admin tạo quán → POST /api/admin/restaurants → sang trang sửa quán.
+// - "create-self" : user thường tự tạo quán → POST /api/restaurants (tự thành owner) →
+//                   update() session để có role owner → sang trang sửa quán nhập menu.
+// - "edit"        : PATCH /api/admin/restaurants/:id rồi refresh để server component tải lại.
+// Toạ độ có thể lấy tự động từ thiết bị qua Geolocation API. Style dùng semantic token vì form
+// này còn render ở trang buyer-facing /restaurants/new (AGENTS §5).
 type Props =
-  | { mode: "create"; restaurant?: undefined }
+  | { mode: "create" | "create-self"; restaurant?: undefined }
   | { mode: "edit"; restaurant: RestaurantForEdit };
 
 export default function InfoForm({ mode, restaurant }: Props) {
   const router = useRouter();
+  const { update } = useSession();
+  const isCreate = mode !== "edit";
   const [name, setName] = useState(restaurant?.name ?? "");
   const [address, setAddress] = useState(restaurant?.address ?? "");
   const [phone, setPhone] = useState(restaurant?.phone ?? "");
@@ -24,8 +30,38 @@ export default function InfoForm({ mode, restaurant }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Nguồn toạ độ hiện tại để chú thích cạnh link Google Maps. null = có sẵn từ DB (edit) chưa rõ nguồn.
+  const [coordSource, setCoordSource] = useState<"address" | "device" | null>(null);
+
+  // Lấy toạ độ TỪ ĐỊA CHỈ TEXT qua /api/geocode (key Google nằm server-side).
+  async function locateFromAddress() {
+    const q = address.trim();
+    if (!q) {
+      setError("Nhập địa chỉ trước khi lấy toạ độ");
+      return;
+    }
+    setGeocoding(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? "Không tìm được toạ độ cho địa chỉ này");
+        return;
+      }
+      const coords = (await res.json()) as { lat: number; lng: number };
+      setLat(String(coords.lat));
+      setLng(String(coords.lng));
+      setCoordSource("address");
+    } catch {
+      setError("Lỗi mạng khi lấy toạ độ từ địa chỉ");
+    } finally {
+      setGeocoding(false);
+    }
+  }
 
   function locate() {
     if (!("geolocation" in navigator)) {
@@ -38,6 +74,7 @@ export default function InfoForm({ mode, restaurant }: Props) {
       (pos) => {
         setLat(String(pos.coords.latitude));
         setLng(String(pos.coords.longitude));
+        setCoordSource("device");
         setLocating(false);
       },
       (err) => {
@@ -68,16 +105,19 @@ export default function InfoForm({ mode, restaurant }: Props) {
       lng: lng.trim() === "" ? null : Number(lng),
     };
     try {
-      if (mode === "create") {
-        const res = (await adminFetch("/api/admin/restaurants", "POST", payload)) as {
-          id: number;
-        };
-        router.push(`/admin/restaurants/${res.id}`);
+      if (mode === "edit") {
+        await adminFetch(`/api/admin/restaurants/${restaurant.id}`, "PATCH", payload);
+        setSaved(true);
+        router.refresh();
         return;
       }
-      await adminFetch(`/api/admin/restaurants/${restaurant.id}`, "PATCH", payload);
-      setSaved(true);
-      router.refresh();
+      // create (admin) hoặc create-self (user thường): endpoint khác nhau, đều trả { id }.
+      const endpoint = mode === "create-self" ? "/api/restaurants" : "/api/admin/restaurants";
+      const res = (await adminFetch(endpoint, "POST", payload)) as { id: number };
+      // User self-serve vừa được nâng role owner trong DB → làm tươi session trước khi vào
+      // khu quản trị, tránh admin/layout chặn vì JWT còn role cũ.
+      if (mode === "create-self") await update();
+      router.push(`/admin/restaurants/${res.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
     } finally {
@@ -86,17 +126,21 @@ export default function InfoForm({ mode, restaurant }: Props) {
   }
 
   const field =
-    "w-full rounded-lg border border-black/15 px-3 py-2 text-sm outline-none focus:border-black/40";
+    "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-brand";
+  // Ô toạ độ chỉ đọc: giá trị đến từ nút lấy toạ độ (thiết bị / địa chỉ), không nhập tay.
+  const coordField =
+    "w-full rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-muted-foreground outline-none";
+
+  const hasCoords = lat.trim() !== "" && lng.trim() !== "";
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${lat},${lng}`,
+  )}`;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-sm">
         Tên quán
         <input className={field} value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        Địa chỉ
-        <input className={field} value={address} onChange={(e) => setAddress(e.target.value)} />
       </label>
       <div className="flex gap-3">
         <label className="flex flex-1 flex-col gap-1 text-sm">
@@ -109,44 +153,77 @@ export default function InfoForm({ mode, restaurant }: Props) {
         </label>
       </div>
 
+      {/* Địa chỉ đặt sát khối toạ độ để tiện lấy toạ độ từ địa chỉ (geocode). */}
+      <label className="flex flex-col gap-1 text-sm">
+        Địa chỉ
+        <input className={field} value={address} onChange={(e) => setAddress(e.target.value)} />
+      </label>
+
       <div className="flex flex-col gap-2">
         <div className="flex items-end gap-3">
           <label className="flex flex-1 flex-col gap-1 text-sm">
             Vĩ độ (lat)
-            <input className={field} value={lat} onChange={(e) => setLat(e.target.value)} />
+            <input className={coordField} value={lat} readOnly />
           </label>
           <label className="flex flex-1 flex-col gap-1 text-sm">
             Kinh độ (lng)
-            <input className={field} value={lng} onChange={(e) => setLng(e.target.value)} />
+            <input className={coordField} value={lng} readOnly />
           </label>
         </div>
-        <button
-          type="button"
-          onClick={locate}
-          disabled={locating}
-          className="self-start rounded-lg border border-black/15 px-3 py-2 text-sm transition hover:bg-black/5 disabled:opacity-50"
-        >
-          {locating ? "Đang lấy vị trí…" : "📍 Lấy toạ độ từ thiết bị"}
-        </button>
+        {hasCoords && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <a
+              href={mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand hover:underline"
+            >
+              📍 Xem trên Google Maps
+            </a>
+            {coordSource && (
+              <span className="text-muted-foreground">
+                (toạ độ lấy từ {coordSource === "address" ? "địa chỉ" : "thiết bị"})
+              </span>
+            )}
+          </div>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={locateFromAddress}
+            disabled={geocoding}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted disabled:opacity-50"
+          >
+            {geocoding ? "Đang tìm toạ độ…" : "🔎 Lấy toạ độ từ địa chỉ"}
+          </button>
+          <button
+            type="button"
+            onClick={locate}
+            disabled={locating}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted disabled:opacity-50"
+          >
+            {locating ? "Đang lấy vị trí…" : "📍 Lấy toạ độ từ thiết bị"}
+          </button>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition hover:bg-black/85 disabled:opacity-50"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-hover disabled:opacity-50"
         >
           {saving
-            ? mode === "create"
+            ? isCreate
               ? "Đang tạo…"
               : "Đang lưu…"
-            : mode === "create"
+            : isCreate
               ? "Tạo quán"
               : "Lưu thông tin"}
         </button>
-        {saved && !saving && <span className="text-sm text-green-600">Đã lưu</span>}
+        {saved && !saving && <span className="text-sm text-muted-foreground">Đã lưu</span>}
       </div>
     </form>
   );

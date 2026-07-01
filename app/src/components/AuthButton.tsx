@@ -318,6 +318,19 @@ export default function AuthButton() {
               </Icon>
             }
           />
+          <NavLink
+            href="/restaurants/new"
+            label="Tạo quán"
+            onNavigate={() => setOpen(false)}
+            icon={
+              <Icon>
+                <path d="M3 9 4 4h16l1 5" />
+                <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
+                <path d="M3 9h18" />
+                <path d="M12 13v4M10 15h4" />
+              </Icon>
+            }
+          />
 
           {/* Phần quản trị — chỉ chủ quán / admin */}
           {isStaff && (
